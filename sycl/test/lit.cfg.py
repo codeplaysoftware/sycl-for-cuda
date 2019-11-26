@@ -75,6 +75,8 @@ config.substitutions.append( ('%llvm_build_libs_dir',  config.llvm_build_libs_di
 config.substitutions.append( ('%sycl_include',  config.sycl_include ) )
 config.substitutions.append( ('%opencl_libs_dir',  config.opencl_libs_dir) )
 config.substitutions.append( ('%sycl_source_dir', config.sycl_source_dir) )
+config.substitutions.append( ('%opencl_include_dir',  config.opencl_include_dir) )
+config.substitutions.append( ('%cuda_toolkit_include',  config.cuda_toolkit_include) )
 
 tools = ['llvm-spirv']
 tool_dirs = [config.llvm_tools_dir]
