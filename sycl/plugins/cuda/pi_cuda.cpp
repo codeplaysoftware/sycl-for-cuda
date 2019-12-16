@@ -739,9 +739,10 @@ pi_result cuda_piDeviceGetInfo(pi_device device, pi_device_info param_name,
                                        device->get()) == CUDA_SUCCESS);
     cl::sycl::detail::pi::assertion(max_z >= 0);
 
-    return_sizes[0] = size_t(max_x);
+    // Work-group sizes are flipped, so flip the max work-group sizes.
+    return_sizes[0] = size_t(max_z);
     return_sizes[1] = size_t(max_y);
-    return_sizes[2] = size_t(max_z);
+    return_sizes[2] = size_t(max_x);
     return getInfoArray(max_work_item_dimensions, param_value_size, param_value,
                         param_value_size_ret, return_sizes);
   }
