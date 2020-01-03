@@ -21,8 +21,8 @@ namespace detail {
 
 namespace enqueue_kernel_launch {
 
-bool handleInvalidWorkGroupSize(const device_impl &DeviceImpl, pi_kernel Kernel,
-                                const NDRDescT &NDRDesc) {
+bool oclHandleInvalidWorkGroupSize(const device_impl &DeviceImpl,
+                                   pi_kernel Kernel, const NDRDescT &NDRDesc) {
   const bool HasLocalSize = (NDRDesc.LocalSize[0] != 0);
 
   const plugin &Plugin = DeviceImpl.getPlugin();
@@ -170,13 +170,52 @@ bool handleInvalidWorkGroupSize(const device_impl &DeviceImpl, pi_kernel Kernel,
       "OpenCL API failed. OpenCL API returns: " + codeToString(Error), Error);
 }
 
+bool handleInvalidWorkGroupSize(const device_impl &DeviceImpl, pi_kernel Kernel,
+                                const NDRDescT &NDRDesc) {
+  const bool HasLocalSize = (NDRDesc.LocalSize[0] != 0);
+
+  const plugin &Plugin = DeviceImpl.getPlugin();
+  RT::PiDevice Device = DeviceImpl.getHandleRef();
+
+  if (HasLocalSize) {
+    size_t maxThreadsPerBlock[3] = {};
+    Plugin.call<PiApiKind::piDeviceGetInfo>(
+        Device, PI_DEVICE_INFO_MAX_WORK_ITEM_SIZES, sizeof(maxThreadsPerBlock),
+        maxThreadsPerBlock, nullptr);
+
+    for (size_t i = 0; i < 3; ++i) {
+      if (maxThreadsPerBlock[i] < NDRDesc.LocalSize[i]) {
+        throw sycl::nd_range_error(
+            "The number of work-items in each dimension of a work-group cannot "
+            "exceed info::device::max_work_item_sizes which is {" +
+                std::to_string(maxThreadsPerBlock[0]) + ", " +
+                std::to_string(maxThreadsPerBlock[1]) + ", " +
+                std::to_string(maxThreadsPerBlock[2]) + "} for this device",
+            PI_INVALID_WORK_GROUP_SIZE);
+      }
+    }
+  }
+
+  // Fallback
+  constexpr pi_result Error = PI_INVALID_WORK_GROUP_SIZE;
+  throw runtime_error(
+      "PI backend failed. PI backend returns: " + codeToString(Error), Error);
+}
+
 bool handleError(pi_result Error, const device_impl &DeviceImpl,
                  pi_kernel Kernel, const NDRDescT &NDRDesc) {
   assert(Error != PI_SUCCESS &&
          "Success is expected to be handled on caller side");
   switch (Error) {
-  case PI_INVALID_WORK_GROUP_SIZE:
+  case PI_INVALID_WORK_GROUP_SIZE: {
+    std::string PlatformName =
+        DeviceImpl.get_platform().get_info<info::platform::name>();
+    // TODO: Find a better way to determine the backend
+    if (PlatformName.find("OpenCL") != std::string::npos) {
+      return oclHandleInvalidWorkGroupSize(DeviceImpl, Kernel, NDRDesc);
+    }
     return handleInvalidWorkGroupSize(DeviceImpl, Kernel, NDRDesc);
+  }
   // TODO: Handle other error codes
   default:
     throw runtime_error(
