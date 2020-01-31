@@ -25,8 +25,8 @@ device_impl::device_impl(RT::PiDevice Device)
 
   RT::PiDevice parent = nullptr;
   // TODO catch an exception and put it to list of asynchronous exceptions
-  PI_CALL(piDeviceGetInfo)(MDevice, PI_DEVICE_INFO_PARENT, sizeof(RT::PiDevice),
-                           &parent, nullptr);
+  PI_CALL(piDeviceGetInfo)(MDevice, PI_DEVICE_INFO_PARENT_DEVICE,
+                           sizeof(RT::PiDevice), &parent, nullptr);
 
   MIsRootDevice = (nullptr == parent);
   if (!MIsRootDevice) {

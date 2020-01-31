@@ -23,25 +23,31 @@
 
 __SYCL_INLINE namespace cl {
 namespace sycl {
-context::context(const async_handler &AsyncHandler)
-    : context(default_selector().select_device(), AsyncHandler) {}
+context::context(const async_handler &AsyncHandler, bool usePrimaryContext)
+    : context(default_selector().select_device(), AsyncHandler,
+              usePrimaryContext) {}
 
-context::context(const device &Device, async_handler AsyncHandler)
-    : context(vector_class<device>(1, Device), AsyncHandler) {}
+context::context(const device &Device, async_handler AsyncHandler,
+                 bool usePrimaryContext)
+    : context(vector_class<device>(1, Device), AsyncHandler,
+              usePrimaryContext) {}
 
-context::context(const platform &Platform, async_handler AsyncHandler)
-    : context(Platform.get_devices(), AsyncHandler) {}
+context::context(const platform &Platform, async_handler AsyncHandler,
+                 bool usePrimaryContext)
+    : context(Platform.get_devices(), AsyncHandler, usePrimaryContext) {}
 
 context::context(const vector_class<device> &DeviceList,
-                 async_handler AsyncHandler) {
+                 async_handler AsyncHandler, bool usePrimaryContext) {
   if (DeviceList.empty()) {
     throw invalid_parameter_error("DeviceList is empty.");
   }
   if (DeviceList[0].is_host())
-    impl = std::make_shared<detail::context_impl>(DeviceList[0], AsyncHandler);
+    impl = std::make_shared<detail::context_impl>(DeviceList[0], AsyncHandler,
+                                                  usePrimaryContext);
   else
     // TODO also check that devices belongs to the same platform
-    impl = std::make_shared<detail::context_impl>(DeviceList, AsyncHandler);
+    impl = std::make_shared<detail::context_impl>(DeviceList, AsyncHandler,
+                                                  usePrimaryContext);
 }
 
 context::context(cl_context ClContext, async_handler AsyncHandler) {

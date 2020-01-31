@@ -6,8 +6,10 @@
 //
 // ===--------------------------------------------------------------------=== //
 
+#include <CL/sycl/backend/cuda.hpp>
 #include <CL/sycl/detail/clusm.hpp>
 #include <CL/sycl/detail/common.hpp>
+#include <CL/sycl/detail/pi.hpp>
 #include <CL/sycl/detail/context_impl.hpp>
 #include <CL/sycl/detail/context_info.hpp>
 #include <CL/sycl/device.hpp>
@@ -21,22 +23,43 @@ __SYCL_INLINE namespace cl {
 namespace sycl {
 namespace detail {
 
-context_impl::context_impl(const device &Device, async_handler AsyncHandler)
+context_impl::context_impl(const device &Device, async_handler AsyncHandler,
+                           bool UseCUDAPrimaryContext)
     : MAsyncHandler(AsyncHandler), MDevices(1, Device), MContext(nullptr),
-      MPlatform(), MPluginInterop(false), MHostContext(true) {}
+      MPlatform(), MPluginInterop(false), MHostContext(true),
+      MUseCUDAPrimaryContext(UseCUDAPrimaryContext) {}
 
 context_impl::context_impl(const vector_class<cl::sycl::device> Devices,
-                           async_handler AsyncHandler)
+                           async_handler AsyncHandler, bool UseCUDAPrimaryContext)
     : MAsyncHandler(AsyncHandler), MDevices(Devices), MContext(nullptr),
-      MPlatform(), MPluginInterop(true), MHostContext(false) {
+      MPlatform(), MPluginInterop(true), MHostContext(false),
+      MUseCUDAPrimaryContext(UseCUDAPrimaryContext) {
   MPlatform = detail::getSyclObjImpl(MDevices[0].get_platform());
   vector_class<RT::PiDevice> DeviceIds;
   for (const auto &D : MDevices) {
     DeviceIds.push_back(getSyclObjImpl(D)->getHandleRef());
   }
 
-  PI_CALL(piContextCreate)(nullptr, DeviceIds.size(), DeviceIds.data(), nullptr,
-                           nullptr, &MContext);
+  if (MPlatform->is_cuda()) {
+#if USE_PI_CUDA
+    const cl_context_properties props[] = {
+        PI_CONTEXT_PROPERTIES_CUDA_PRIMARY,
+        0};
+
+    PI_CALL(piContextCreate)(props, DeviceIds.size(), 
+	  	  DeviceIds.data(), nullptr, nullptr, &MContext);
+#else
+    cl::sycl::detail::pi::die("CUDA support was not enabled at compilation time");
+#endif
+  } else {
+    const cl_context_properties props[] = {
+        0};
+
+    PI_CALL(piContextCreate)(props, DeviceIds.size(), 
+	  	  DeviceIds.data(), nullptr, nullptr, &MContext);
+  }
+
+  MUSMDispatch.reset(new usm::USMDispatcher(MPlatform->get(), DeviceIds));
 }
 
 context_impl::context_impl(RT::PiContext PiContext, async_handler AsyncHandler)

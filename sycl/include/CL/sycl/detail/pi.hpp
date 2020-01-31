@@ -13,6 +13,7 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/os_util.hpp>
 #include <CL/sycl/detail/pi.h>
+#include <sstream>
 
 #include <cassert>
 #include <string>
@@ -30,16 +31,34 @@ void *loadOsLibrary(const std::string &Library);
 // library, implementation is OS dependent.
 void *getOsLibraryFuncAddress(void *Library, const std::string &FunctionName);
 
+// Report error and no return (keeps compiler happy about no return statements).
+[[noreturn]] void die(const char *Message);
+void assertion(bool Condition, const char *Message = nullptr);
+
+template <typename T>
+void handleUnknownParamName(const char *functionName, T parameter) {
+  std::stringstream stream;
+  stream << "Unknown parameter " << parameter << " passed to " << functionName
+         << "\n";
+  auto str = stream.str();
+  auto msg = str.c_str();
+  die(msg);
+}
+
+// This macro is used to report invalid enumerators being passed to PI API
+// GetInfo functions. It will print the name of the function that invoked it
+// and the value of the unknown enumerator.
+#define PI_HANDLE_UNKNOWN_PARAM_NAME(parameter)                                \
+  { cl::sycl::detail::pi::handleUnknownParamName(__func__, parameter); }
+
 // For selection of SYCL RT back-end, now manually through the "SYCL_BE"
 // environment variable.
 //
-enum Backend { SYCL_BE_PI_OPENCL, SYCL_BE_PI_OTHER };
-
-#ifdef SYCL_RT_OS_WINDOWS
-#define PLUGIN_NAME "pi_opencl.dll"
-#else
-#define PLUGIN_NAME "libpi_opencl.so"
-#endif
+enum Backend {
+  SYCL_BE_PI_OPENCL,
+  SYCL_BE_PI_CUDA,
+  SYCL_BE_PI_OTHER
+};
 
 // Check for manually selected BE at run-time.
 bool useBackend(Backend Backend);
@@ -72,10 +91,6 @@ using PiMemImageChannelType = ::pi_image_channel_type;
 
 // Get a string representing a _pi_platform_info enum
 std::string platformInfoToString(pi_platform_info info);
-
-// Report error and no return (keeps compiler happy about no return statements).
-[[noreturn]] void die(const char *Message);
-void assertion(bool Condition, const char *Message = nullptr);
 
 // Want all the needed casts be explicit, do not define conversion operators.
 template <class To, class From> To cast(From value);
@@ -202,9 +217,9 @@ namespace RT = cl::sycl::detail::pi;
 // Use this macro to call the API, trace the call, check the return and throw a
 // runtime_error exception.
 // Usage: PI_CALL(pi)(Args);
-#define PI_CALL(pi)                                                            \
-  RT::CallPiAndCheck<decltype(&::pi),                                          \
-                     (offsetof(pi_plugin::FunctionPointers, pi))>()
+#define PI_CALL(pi_func)                                                            \
+  cl::sycl::detail::pi::CallPiAndCheck<decltype(&::pi_func),                                          \
+                     (offsetof(pi_plugin::FunctionPointers, pi_func))>()
 
 // Use this macro to call the API, trace the call and return the result.
 // To check the result use checkPiResult.

@@ -8,12 +8,14 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/pi.hpp>
 
+#include <bitset>
 #include <cstdarg>
 #include <cstring>
 #include <iostream>
 #include <map>
 #include <stddef.h>
 #include <string>
+#include <sstream>
 
 __SYCL_INLINE namespace cl {
 namespace sycl {
@@ -38,15 +40,82 @@ std::string platformInfoToString(pi_platform_info info) {
   }
 }
 
+std::string memFlagToString(pi_mem_flags Flag) {
+  assertion(((Flag == 0u) || ((Flag & (Flag - 1)) == 0)) &&
+            "More than one bit set");
+
+  std::stringstream Sstream;
+
+  switch (Flag) {
+  case pi_mem_flags{0}:
+    Sstream << "pi_mem_flags(0)";
+    break;
+  case PI_MEM_FLAGS_ACCESS_RW:
+    Sstream << "PI_MEM_FLAGS_ACCESS_RW";
+    break;
+  case PI_MEM_FLAGS_HOST_PTR_USE:
+    Sstream << "PI_MEM_FLAGS_HOST_PTR_USE";
+    break;
+  case PI_MEM_FLAGS_HOST_PTR_COPY:
+    Sstream << "PI_MEM_FLAGS_HOST_PTR_COPY";
+    break;
+  default:
+    Sstream << "unknown pi_mem_flags bit == " << Flag;
+  }
+
+  return Sstream.str();
+}
+
+std::string memFlagsToString(pi_mem_flags Flags) {
+  std::stringstream Sstream;
+  bool FoundFlag = false;
+
+  auto FlagSeparator = [](bool FoundFlag) { return FoundFlag ? "|" : ""; };
+
+  pi_mem_flags ValidFlags[] = {PI_MEM_FLAGS_ACCESS_RW,
+                               PI_MEM_FLAGS_HOST_PTR_USE,
+                               PI_MEM_FLAGS_HOST_PTR_COPY};
+
+  if (Flags == 0u) {
+    Sstream << "pi_mem_flags(0)";
+  } else {
+    for (const auto Flag : ValidFlags) {
+      if (Flag & Flags) {
+        Sstream << FlagSeparator(FoundFlag) << memFlagToString(Flag);
+        FoundFlag = true;
+      }
+    }
+
+    std::bitset<64> UnkownBits(Flags & ~(PI_MEM_FLAGS_ACCESS_RW |
+                                         PI_MEM_FLAGS_HOST_PTR_USE |
+                                         PI_MEM_FLAGS_HOST_PTR_COPY));
+    if (UnkownBits.any()) {
+      Sstream << FlagSeparator(FoundFlag)
+              << "unknown pi_mem_flags bits == " << UnkownBits;
+    }
+  }
+
+  return Sstream.str();
+}
+
 // Check for manually selected BE at run-time.
-bool useBackend(Backend TheBackend) {
+static Backend getBackend() {
   static const char *GetEnv = std::getenv("SYCL_BE");
   // Current default backend as SYCL_BE_PI_OPENCL
-  // Valid values of GetEnv are "PI_OPENCL" and "PI_OTHER"
+  // Valid values of GetEnv are "PI_OPENCL", "PI_CUDA" and "PI_OTHER"
   std::string StringGetEnv = (GetEnv ? GetEnv : "PI_OPENCL");
   static const Backend Use =
-      (StringGetEnv == "PI_OTHER" ? SYCL_BE_PI_OTHER : SYCL_BE_PI_OPENCL);
-  return TheBackend == Use;
+    std::map<std::string, Backend>{
+      { "PI_OPENCL", SYCL_BE_PI_OPENCL },
+      { "PI_CUDA", SYCL_BE_PI_CUDA },
+      { "PI_OTHER",  SYCL_BE_PI_OTHER }
+    }[ GetEnv ? StringGetEnv : "PI_OPENCL"];
+  return Use;
+}
+
+// Check for manually selected BE at run-time.
+bool useBackend(Backend TheBackend) {
+  return TheBackend == getBackend();
 }
 
 // TODO: Move this global structure into sycl::platform object,
@@ -55,12 +124,29 @@ pi_plugin PluginInformation;
 
 // Find the plugin at the appropriate location and return the location.
 // TODO: Change the function appropriately when there are multiple plugins.
-std::string findPlugin() {
+std::string findPlugin(Backend TheBackend) {
+  std::string retName{""};
+#ifdef SYCL_RT_OS_WINDOWS
+  if (TheBackend == SYCL_BE_PI_CUDA)  {
+    // CUDA backend is not supported on Windows
+    return retName;
+  }
+
+  if (TheBackend == SYCL_BE_PI_OPENCL) {
+    return "pi_opencl.dll"
+  }
+#else
+  if (TheBackend == SYCL_BE_PI_OPENCL) {
+    retName = "libpi_opencl.so";
+  } else if (TheBackend == SYCL_BE_PI_CUDA) {
+    retName = "libpi_cuda.so";
+  } 
+#endif  // ifdef
   // TODO: Based on final design discussions, change the location where the
   // plugin must be searched; how to identify the plugins etc. Currently the
   // search is done for libpi_opencl.so/pi_opencl.dll file in LD_LIBRARY_PATH
   // env only.
-  return PLUGIN_NAME;
+  return retName;
 }
 
 // Load the Plugin by calling the OS dependent library loading call.
@@ -102,11 +188,14 @@ void initialize() {
   if (Initialized) {
     return;
   }
-  if (!useBackend(SYCL_BE_PI_OPENCL)) {
+ 
+  const auto backend = getBackend();
+
+  if (backend == SYCL_BE_PI_OTHER) {
     die("Unknown SYCL_BE");
   }
 
-  std::string PluginPath = findPlugin();
+  std::string PluginPath = findPlugin(backend);
   if (PluginPath.empty())
     die("Plugin Not Found.");
 

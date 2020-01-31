@@ -492,6 +492,8 @@ bool oclIsBuiltin(const StringRef &Name, std::string *DemangledName,
   // Similar to ::std:: in C++.
   if (IsCpp) {
     if (!Name.startswith("_ZN"))
+      // Attempt to demangle as C. This is useful for "extern C" functions
+      // that have manually mangled names.
       return false;
     // Skip CV and ref qualifiers.
     size_t NameSpaceStart = Name.find_first_not_of("rVKRO", 3);
@@ -510,7 +512,7 @@ bool oclIsBuiltin(const StringRef &Name, std::string *DemangledName,
     Name.substr(2, Start - 2).getAsInteger(10, Len);
     *DemangledName = Name.substr(Start, Len);
   }
-  return true;
+  return DemangledName->size() != 0;
 }
 
 // Check if a mangled type Name is unsigned
