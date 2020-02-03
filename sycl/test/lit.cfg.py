@@ -107,13 +107,13 @@ def getDeviceCount(device_type):
         if len(result) > 1 and len(result[1]):
             print("getDeviceCount {TYPE}:{MSG}".format(
                 TYPE=device_type, MSG=result[1]))
-            if re.match(r".*cuda", result[1]):
+            if re.match(r".*cuda.*", result[1]):
                 is_cuda = True;
         if err:
             print("getDeviceCount {TYPE}:{ERR}".format(
                 TYPE=device_type, ERR=err))
         return [value,is_cuda]
-    return 0
+    return [0, False]
 
 # Every SYCL implementation provides a host implementation.
 config.available_features.add('host')
@@ -151,6 +151,8 @@ if gpu_count > 0:
     config.available_features.add('gpu')
     if cuda:
        config.available_features.add('cuda')
+       gpu_run_substitute += " SYCL_BE=PI_CUDA "
+
 
     if platform.system() == "Linux":
         gpu_run_on_linux_substitute = "env SYCL_DEVICE_TYPE=GPU "
