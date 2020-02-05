@@ -1,3 +1,6 @@
+// UNSUPPORTED: cuda
+// CUDA is not compatible with the OpenCL image spec.
+//
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple -I %sycl_source_dir %s -o %t1.out
 // RUN: %clangxx -I %sycl_source_dir %s -o %t3.out -lsycl
 // RUN: env SYCL_DEVICE_TYPE=HOST %t1.out
