@@ -831,7 +831,8 @@ pi_result cuda_piDeviceGetInfo(pi_device device, pi_device_info param_name,
                    pi_uint64{max_alloc});
   }
   case PI_DEVICE_INFO_IMAGE_SUPPORT: {
-    return getInfo(param_value_size, param_value, param_value_size_ret, false);
+    return getInfo(param_value_size, param_value, param_value_size_ret,
+                   PI_FALSE);
   }
   case PI_DEVICE_INFO_MAX_READ_IMAGE_ARGS: {
     return getInfo(param_value_size, param_value, param_value_size_ret, 0);
