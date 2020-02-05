@@ -70,7 +70,7 @@ void check(queue &Queue, unsigned int G, unsigned int L) {
                         "uniform_group_range");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

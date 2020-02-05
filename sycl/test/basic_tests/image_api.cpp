@@ -16,9 +16,9 @@
 #include <detail/kernel_impl.hpp>
 #include <detail/scheduler/scheduler.hpp>
 
+#include "../helpers.hpp"
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -147,7 +147,8 @@ int main() {
     s::event EventRet = d::createSyclObjFromImpl<s::event>(Event);
     EventRet.wait();
   } catch (const s::exception &E) {
-    std::cout << "SYCL exception caught: " << E.what() << std::endl;
+    std::cerr << "SYCL exception caught: " << E.what() << std::endl;
+    throw;
   }
 
   s::float4 Expected{10.f, 20.f, 30.f, 40.f};
@@ -160,7 +161,7 @@ int main() {
   if (Result) {
     std::cout << "The result is correct." << std::endl;
   } else {
-    std::cout << "The result is incorrect." << std::endl;
+    std::cerr << "The result is incorrect." << std::endl;
     assert(Result);
   }
   return 0;

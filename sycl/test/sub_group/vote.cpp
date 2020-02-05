@@ -1,9 +1,11 @@
+
+
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-// UNSUPPORTED: cuda
+
 //==--------------- vote.cpp - SYCL sub_group vote test --*- C++ -*---------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -69,7 +71,7 @@ void check(queue Queue, const int G, const int L, const int D, const int R) {
     }
 
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

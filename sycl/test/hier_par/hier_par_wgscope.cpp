@@ -117,7 +117,7 @@ static bool testWgScope(queue &Q) {
     });
     Q.wait();
   } catch (cl::sycl::exception const &E) {
-    std::cout << "SYCL exception caught: " << E.what() << '\n';
+    std::cerr << "SYCL exception caught: " << E.what() << '\n';
     return 2;
   }
   // verify
@@ -167,7 +167,7 @@ static bool testWgScope(queue &Q) {
     std::cout << "  Passed\n";
     return true;
   }
-  std::cout << "  Failed. Failure rate: " << ErrCnt << "/" << RangeLength << "("
+  std::cerr << "  Failed. Failure rate: " << ErrCnt << "/" << RangeLength << "("
             << ErrCnt / (float)RangeLength * 100.f << "%)\n";
   return false;
 }
@@ -260,13 +260,14 @@ int main() {
       try {
         std::rethrow_exception(ep);
       } catch (std::exception &E) {
-        std::cout << "*** std exception caught:\n";
-        std::cout << E.what();
+        std::cerr << "*** std exception caught:\n";
+        std::cerr << E.what();
       } catch (cl::sycl::exception const &E1) {
-        std::cout << "*** SYCL exception caught:\n";
-        std::cout << E1.what();
+        std::cerr << "*** SYCL exception caught:\n";
+        std::cerr << E1.what();
       }
     }
+    throw "ERROR: Asynchronous exception(s)";
   });
   std::cout << "Using device: "
             << Q.get_device().get_info<cl::sycl::info::device::name>() << "\n";
@@ -276,7 +277,7 @@ int main() {
   Passed &= testPrivateMemory(Q);
 
   if (!Passed) {
-    std::cout << "FAILED\n";
+    std::cerr << "FAILED\n";
     return 1;
   }
   std::cout << "Passed\n";

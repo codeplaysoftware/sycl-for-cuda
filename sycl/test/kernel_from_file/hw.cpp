@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
     std::cout << "Passed\n";
     return 0;
   } else {
-    std::cout << "Failed: " << data << "!= 6(gold)\n";
+    std::cerr << "Failed: " << data << "!= 6(gold)\n";
     return 1;
   }
 }

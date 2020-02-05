@@ -3,7 +3,6 @@
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-// UNSUPPORTED: cuda
 //
 //==----------- load_store.cpp - SYCL sub_group load/store test ------------==//
 //
@@ -81,7 +80,7 @@ template <typename T, int N> void check(queue &Queue) {
       }
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }
@@ -134,7 +133,7 @@ template <typename T> void check(queue &Queue) {
     }
 
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

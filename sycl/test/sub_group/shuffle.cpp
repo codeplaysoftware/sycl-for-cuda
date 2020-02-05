@@ -1,9 +1,10 @@
+
+
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUNx: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-// UNSUPPORTED: cuda
 //
 //==------------ shuffle.cpp - SYCL sub_group shuffle test -----*- C++ -*---==//
 //
@@ -125,7 +126,7 @@ void check(queue &Queue, size_t G = 240, size_t L = 60) {
       exit_if_not_equal_vec(acc_xor[j], vec<T, N>(j ^ SGid), "shuffle_xor");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }
@@ -224,7 +225,7 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
       exit_if_not_equal<T>(acc_xor[j], j ^ SGid, "shuffle_xor");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

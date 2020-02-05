@@ -1,3 +1,5 @@
+
+
 //-fsycl-targets=%sycl_triple
 // RUN: %clangxx -fsycl -std=c++14 %s -o %t.out
 // RUN: %clangxx -fsycl -std=c++14 -D SG_GPU %s -o %t_gpu.out
@@ -5,7 +7,7 @@
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t_gpu.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-// UNSUPPORTED: cuda
+
 //==--------------- reduce.cpp - SYCL sub_group reduce test ----*- C++ -*---==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -62,7 +64,7 @@ void check_op(queue &Queue, T init, BinaryOperation op, bool skip_init = false,
       exit_if_not_equal<T>(acc[j], result, name.c_str());
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

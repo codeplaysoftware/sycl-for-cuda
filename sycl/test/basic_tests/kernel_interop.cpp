@@ -1,9 +1,11 @@
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out -L %opencl_libs_dir -lOpenCL
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-
-// REQUIRES: opencl
 
 //==--------------- kernel_interop.cpp - SYCL kernel ocl interop test ------==//
 //
@@ -12,9 +14,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
-
-#include <cassert>
 
 using namespace cl::sycl;
 
@@ -55,10 +56,11 @@ int main() {
     context Context1 = Queue1.get_context();
     try {
       kernel Kernel(ClKernel, Context1);
-    } catch (cl::sycl::invalid_parameter_error e) {
-      Pass = true;
+      CHECK(!"Expected exception not caught");
+    } catch (cl::sycl::invalid_parameter_error ExpectedException) {
+      std::cout << "Expected exception caught " << ExpectedException.what()
+                << std::endl;
     }
-    assert(Pass);
 
     kernel Kernel(ClKernel, Context);
 

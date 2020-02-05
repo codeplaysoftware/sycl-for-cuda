@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
-#include <cassert>
 #include <iomanip>
 #if DEBUG_OUTPUT
 #include <iostream>
@@ -35,7 +35,7 @@ void check_write_data(PixelDataType *HostDataPtr, PixelDataT ExpectedData) {
         (HostDataPtr[3] == (PixelDataType)ExpectedData.w())) {
       std::cout << "Data written is correct: " << std::endl;
     } else {
-      std::cout << "Data written is WRONG: " << std::endl;
+      std::cerr << "Data written is WRONG: " << std::endl;
     }
     std::cout << "HostDataPtr: \t" << (float)HostDataPtr[0] << "  "
               << (float)HostDataPtr[1] << "  " << (float)HostDataPtr[2] << "  "
@@ -46,10 +46,10 @@ void check_write_data(PixelDataType *HostDataPtr, PixelDataT ExpectedData) {
               << "  " << (float)ExpectedData.w() << std::endl;
   }
 #else
-  assert(HostDataPtr[0] == (PixelDataType)ExpectedData.x());
-  assert(HostDataPtr[1] == (PixelDataType)ExpectedData.y());
-  assert(HostDataPtr[2] == (PixelDataType)ExpectedData.z());
-  assert(HostDataPtr[3] == (PixelDataType)ExpectedData.w());
+  CHECK(HostDataPtr[0] == (PixelDataType)ExpectedData.x());
+  CHECK(HostDataPtr[1] == (PixelDataType)ExpectedData.y());
+  CHECK(HostDataPtr[2] == (PixelDataType)ExpectedData.z());
+  CHECK(HostDataPtr[3] == (PixelDataType)ExpectedData.w());
 #endif
 }
 
@@ -62,7 +62,7 @@ void check_write_data(s::cl_half *HostDataPtr, s::cl_half4 ExpectedData) {
         (HostDataPtr[3] == (float)ExpectedData.w())) {
       std::cout << "Data written is correct: " << std::endl;
     } else {
-      std::cout << "Data written is WRONG: " << std::endl;
+      std::cerr << "Data written is WRONG: " << std::endl;
     }
     std::cout << "HostDataPtr: \t" << (float)HostDataPtr[0] << "  "
               << (float)HostDataPtr[1] << "  " << (float)HostDataPtr[2] << "  "
@@ -73,10 +73,10 @@ void check_write_data(s::cl_half *HostDataPtr, s::cl_half4 ExpectedData) {
               << "  " << (float)ExpectedData.w() << std::endl;
   }
 #else
-  assert(HostDataPtr[0] == (float)ExpectedData.x());
-  assert(HostDataPtr[1] == (float)ExpectedData.y());
-  assert(HostDataPtr[2] == (float)ExpectedData.z());
-  assert(HostDataPtr[3] == (float)ExpectedData.w());
+  CHECK(HostDataPtr[0] == (float)ExpectedData.x());
+  CHECK(HostDataPtr[1] == (float)ExpectedData.y());
+  CHECK(HostDataPtr[2] == (float)ExpectedData.z());
+  CHECK(HostDataPtr[3] == (float)ExpectedData.w());
 #endif
 }
 
@@ -94,7 +94,7 @@ void check_read_data(ReadDataT ReadData, ReadDataT ExpectedColor) {
         ((ReadDataType)ReadData.w() == (ReadDataType)ExpectedColor.w())) {
       std::cout << "Read Data is correct: " << std::endl;
     } else {
-      std::cout << "Read Data is WRONG: " << std::endl;
+      std::cerr << "Read Data is WRONG: " << std::endl;
     }
     std::cout << "ReadData: \t"
               << std::setprecision(std::numeric_limits<long double>::digits10 +
@@ -114,10 +114,10 @@ void check_read_data(ReadDataT ReadData, ReadDataT ExpectedColor) {
   }
 #else
   {
-    assert((ReadDataType)ReadData.x() == (ReadDataType)ExpectedColor.x());
-    assert((ReadDataType)ReadData.y() == (ReadDataType)ExpectedColor.y());
-    assert((ReadDataType)ReadData.z() == (ReadDataType)ExpectedColor.z());
-    assert((ReadDataType)ReadData.w() == (ReadDataType)ExpectedColor.w());
+    CHECK((ReadDataType)ReadData.x() == (ReadDataType)ExpectedColor.x());
+    CHECK((ReadDataType)ReadData.y() == (ReadDataType)ExpectedColor.y());
+    CHECK((ReadDataType)ReadData.z() == (ReadDataType)ExpectedColor.z());
+    CHECK((ReadDataType)ReadData.w() == (ReadDataType)ExpectedColor.w());
   }
 #endif
 }
@@ -135,7 +135,7 @@ void check_read_data(s::cl_float4 ReadData, s::cl_float4 ExpectedColor) {
         ((s::cl_int)Diff.w() <= 1 && (s::cl_int)Diff.w() >= -1)) {
       std::cout << "Read Data is correct within precision: " << std::endl;
     } else {
-      std::cout << "Read Data is WRONG/ outside precision: " << std::endl;
+      std::cerr << "Read Data is WRONG/ outside precision: " << std::endl;
     }
     std::cout << "ReadData: \t"
               << std::setprecision(std::numeric_limits<long double>::digits10 +
@@ -153,10 +153,10 @@ void check_read_data(s::cl_float4 ReadData, s::cl_float4 ExpectedColor) {
   }
 #else
   {
-    assert((s::cl_int)Diff.x() <= 1 && (s::cl_int)Diff.x() >= -1);
-    assert((s::cl_int)Diff.y() <= 1 && (s::cl_int)Diff.y() >= -1);
-    assert((s::cl_int)Diff.z() <= 1 && (s::cl_int)Diff.z() >= -1);
-    assert((s::cl_int)Diff.w() <= 1 && (s::cl_int)Diff.w() >= -1);
+    CHECK((s::cl_int)Diff.x() <= 1 && (s::cl_int)Diff.x() >= -1);
+    CHECK((s::cl_int)Diff.y() <= 1 && (s::cl_int)Diff.y() >= -1);
+    CHECK((s::cl_int)Diff.z() <= 1 && (s::cl_int)Diff.z() >= -1);
+    CHECK((s::cl_int)Diff.w() <= 1 && (s::cl_int)Diff.w() >= -1);
   }
 #endif
 }

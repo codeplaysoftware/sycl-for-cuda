@@ -1,9 +1,11 @@
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out -L %opencl_libs_dir -lOpenCL
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
-
-// REQUIRES: opencl
 
 //==------------ subbuffer_interop.cpp - SYCL buffer basic test ------------==//
 //
@@ -13,9 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../../helpers.hpp"
 #include <CL/sycl.hpp>
-
-#include <cassert>
 #include <memory>
 #include <numeric>
 
@@ -104,19 +105,20 @@ int main() {
       clReleaseKernel(clKernel);
       clReleaseProgram(clProgram);
     } catch (exception &ex) {
-      std::cout << ex.what() << std::endl;
+      std::cerr << ex.what() << std::endl;
+      throw;
     }
 
     for (int i = 0; i < NSize; ++i) {
       if (i < NSize / 2 && AMem[i] != i) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << i
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= NSize / 2 && AMem[i] != 0) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << 0
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       }
     }
@@ -172,29 +174,30 @@ int main() {
       clReleaseKernel(clKernel);
       clReleaseProgram(clProgram);
     } catch (exception &ex) {
-      std::cout << ex.what() << std::endl;
+      std::cerr << ex.what() << std::endl;
+      throw;
     }
 
     for (int i = 0; i < NSize; ++i) {
       if (i < NSize / 4 && AMem[i] != 0) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << 0
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= NSize / 4 && i < 2 * NSize / 4 && AMem[i] != i) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << i
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= 2 * NSize / 4 && i < 3 * NSize / 4 && AMem[i] != 0) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << 0
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= 3 * NSize / 4 && AMem[i] != i) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << i
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       }
     }
@@ -262,24 +265,25 @@ int main() {
       clReleaseKernel(clKernel2);
       clReleaseProgram(clProgram);
     } catch (exception &ex) {
-      std::cout << ex.what() << std::endl;
+      std::cerr << ex.what() << std::endl;
+      throw;
     }
 
     for (int i = 0; i < NSize; ++i) {
       if (i < NSize / 4 && AMem[i] != 0) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << 0
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= NSize / 4 && i < 2 * NSize / 4 && AMem[i] != 1) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << i
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       } else if (i >= 2 * NSize / 4 && AMem[i] != i) {
         std::cout << " array[" << i << "] is " << AMem[i] << " expected " << i
                   << std::endl;
-        assert(false);
+        CHECK(false);
         Failed = true;
       }
     }
@@ -317,7 +321,7 @@ int main() {
     {
       auto host_acc = subbuf_copy->get_access<cl::sycl::access::mode::read>();
       std::cout << "On host: offset = " << host_acc[0] << std::endl;
-      assert(host_acc[0] == 256 && "Invalid subbuffer origin");
+      CHECK(host_acc[0] == 256 && "Invalid subbuffer origin");
     }
 
     Q.submit([&](cl::sycl::handler &cgh) {
@@ -331,7 +335,7 @@ int main() {
     {
       auto host_acc = subbuf_copy->get_access<cl::sycl::access::mode::read>();
       std::cout << "On host: offset = " << host_acc[0] << std::endl;
-      assert(host_acc[0] == 256 * 3 && "Invalid subbuffer origin");
+      CHECK(host_acc[0] == 256 * 3 && "Invalid subbuffer origin");
     }
   }
 

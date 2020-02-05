@@ -53,7 +53,7 @@ template <typename T> void check(queue &Queue) {
                            "broadcasted value");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

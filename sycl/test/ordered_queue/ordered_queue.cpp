@@ -1,3 +1,7 @@
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
 // RUN: %clangxx -fsycl %s -o %t.out -L %opencl_libs_dir -lOpenCL
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 //==---------- ordered_queue.cpp - SYCL ordered queue test -----------------==//
@@ -7,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
 #include <iostream>
 
@@ -27,20 +32,21 @@ void print_queue_info(const ordered_queue &q) {
             << std::endl;
 }
 int main() {
-  try {
+  {
     std::cout << "Create default queue." << std::endl;
     ordered_queue q;
     print_queue_info(q);
-    cl_command_queue_properties reportedProps;
-    cl_int iRet =
-        clGetCommandQueueInfo(q.get(), CL_QUEUE_PROPERTIES,
-                              sizeof(reportedProps), &reportedProps, NULL);
-    assert(CL_SUCCESS == iRet && "Failed to obtain queue info from ocl device");
-    std::cout << "Queue properties bits are " << reportedProps
-              << " and OOO bit is " << CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE
-              << std::endl;
-  } catch (device_error e) {
-    std::cout << "Failed to create device for context" << std::endl;
+    if (!q.is_host()) {
+      cl_command_queue_properties reportedProps;
+      cl_int iRet =
+          clGetCommandQueueInfo(q.get(), CL_QUEUE_PROPERTIES,
+                                sizeof(reportedProps), &reportedProps, NULL);
+      CHECK(CL_SUCCESS == iRet &&
+            "Failed to obtain queue info from ocl device");
+      std::cout << "Queue properties bits are " << reportedProps
+                << " and OOO bit is " << CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE
+                << std::endl;
+    }
   }
 
   auto Devices = device::get_devices();
@@ -51,10 +57,10 @@ int main() {
     ordered_queue Queue(DeviceA);
     size_t Hash = hash_class<ordered_queue>()(Queue);
     ordered_queue MovedQueue(std::move(Queue));
-    assert(Hash == hash_class<ordered_queue>()(MovedQueue));
-    assert(DeviceA.is_host() == MovedQueue.is_host());
+    CHECK(Hash == hash_class<ordered_queue>()(MovedQueue));
+    CHECK(DeviceA.is_host() == MovedQueue.is_host());
     if (!DeviceA.is_host()) {
-      assert(MovedQueue.get() != nullptr);
+      CHECK(MovedQueue.get() != nullptr);
     }
   }
   {
@@ -63,10 +69,10 @@ int main() {
     size_t Hash = hash_class<ordered_queue>()(Queue);
     ordered_queue WillMovedQueue(DeviceB);
     WillMovedQueue = std::move(Queue);
-    assert(Hash == hash_class<ordered_queue>()(WillMovedQueue));
-    assert(DeviceA.is_host() == WillMovedQueue.is_host());
+    CHECK(Hash == hash_class<ordered_queue>()(WillMovedQueue));
+    CHECK(DeviceA.is_host() == WillMovedQueue.is_host());
     if (!DeviceA.is_host()) {
-      assert(WillMovedQueue.get() != nullptr);
+      CHECK(WillMovedQueue.get() != nullptr);
     }
   }
   {
@@ -74,10 +80,10 @@ int main() {
     ordered_queue Queue(DeviceA);
     size_t Hash = hash_class<ordered_queue>()(Queue);
     ordered_queue QueueCopy(Queue);
-    assert(Hash == hash_class<ordered_queue>()(Queue));
-    assert(Hash == hash_class<ordered_queue>()(QueueCopy));
-    assert(Queue == QueueCopy);
-    assert(Queue.is_host() == QueueCopy.is_host());
+    CHECK(Hash == hash_class<ordered_queue>()(Queue));
+    CHECK(Hash == hash_class<ordered_queue>()(QueueCopy));
+    CHECK(Queue == QueueCopy);
+    CHECK(Queue.is_host() == QueueCopy.is_host());
   }
   {
     std::cout << "copy assignment operator" << std::endl;
@@ -85,10 +91,10 @@ int main() {
     size_t Hash = hash_class<ordered_queue>()(Queue);
     ordered_queue WillQueueCopy(DeviceB);
     WillQueueCopy = Queue;
-    assert(Hash == hash_class<ordered_queue>()(Queue));
-    assert(Hash == hash_class<ordered_queue>()(WillQueueCopy));
-    assert(Queue == WillQueueCopy);
-    assert(Queue.is_host() == WillQueueCopy.is_host());
+    CHECK(Hash == hash_class<ordered_queue>()(Queue));
+    CHECK(Hash == hash_class<ordered_queue>()(WillQueueCopy));
+    CHECK(Queue == WillQueueCopy);
+    CHECK(Queue.is_host() == WillQueueCopy.is_host());
   }
 
   {
@@ -97,7 +103,7 @@ int main() {
     try {
       Queue.throw_asynchronous();
     } catch (const std::bad_function_call &e) {
-      std::cout << "Default asynchronous handler call failed: " << e.what()
+      std::cerr << "Default asynchronous handler call failed: " << e.what()
                 << std::endl;
       throw;
     }
@@ -108,6 +114,6 @@ int main() {
     device Device = Selector.select_device();
     context Context(Device);
     ordered_queue Queue(Context, Selector);
-    assert(Context == Queue.get_context());
+    CHECK(Context == Queue.get_context());
   }
 }

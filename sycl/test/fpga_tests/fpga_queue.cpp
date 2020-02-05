@@ -1,9 +1,13 @@
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out -L %opencl_libs_dir -lOpenCL
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %ACC_RUN_PLACEHOLDER %t.out
 // RUN: %CPU_RUN_PLACEHOLDER %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
-// UNSUPPORTED: cuda
+
 //==------------- fpga_queue.cpp - SYCL FPGA queues test -------------------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -11,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
 #include <iostream>
 #include <set>
@@ -22,16 +27,19 @@ const int maxNumQueues = 256;
 
 void GetCLQueue(event sycl_event, std::set<cl_command_queue>& cl_queues) {
   try {
-    cl_command_queue cl_queue;
-    cl_event cl_event = sycl_event.get();
-    cl_int error = clGetEventInfo(cl_event, CL_EVENT_COMMAND_QUEUE,
-                                  sizeof(cl_queue), &cl_queue, nullptr);
-    assert(CL_SUCCESS == error && "Failed to obtain queue from OpenCL event");
+    if (!sycl_event.is_host()) {
+      cl_command_queue cl_queue;
+      cl_event cl_event = sycl_event.get();
+      cl_int error = clGetEventInfo(cl_event, CL_EVENT_COMMAND_QUEUE,
+                                    sizeof(cl_queue), &cl_queue, nullptr);
+      CHECK(CL_SUCCESS == error && "Failed to obtain queue from OpenCL event");
 
-    cl_queues.insert(cl_queue);
+      cl_queues.insert(cl_queue);
+    }
   } catch (invalid_object_error e) {
-    std::cout << "Failed to get OpenCL queue from SYCL event: " << e.what()
+    std::cerr << "Failed to get OpenCL queue from SYCL event: " << e.what()
               << std::endl;
+    throw;
   }
 }
 
@@ -42,9 +50,10 @@ int getExpectedQueueNumber(cl_device_id device_id, int default_value) {
                                  sizeof(reportedProps),
                                  &reportedProps,
                                  NULL);
-   assert(CL_SUCCESS == iRet && "Failed to obtain queue info from ocl device");
+   CHECK(CL_SUCCESS == iRet && "Failed to obtain queue info from ocl device");
    return (reportedProps & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE)
-              ? 1 : default_value;
+              ? 1
+              : default_value;
 }
 
 int main() {

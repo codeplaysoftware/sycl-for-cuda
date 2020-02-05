@@ -1,9 +1,11 @@
 // REQUIRES: ocloc, gpu
+// UNSUPPORTED: cuda
+// CUDA is not compatible with SPIR.
 
 // RUN: %clangxx -fsycl -fsycl-targets=spir64_gen-unknown-unknown-sycldevice -Xsycl-target-backend=spir64_gen-unknown-unknown-sycldevice "-device skl" %s -o %t.out
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 // RUN: %GPU_RUN_PLACEHOLDER %t.out
-// XFAIL: cuda
+
 //==----- gpu.cpp - AOT compilation for gen devices using GEN compiler  ------==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -36,6 +38,7 @@ void simple_vadd(const std::array<T, N>& VA, const std::array<T, N>& VB,
           std::cerr << "Unknown async exception was caught." << std::endl;
         }
       }
+      throw "ERROR: Asynchronous exception(s)";
     });
 
   cl::sycl::range<1> numOfItems{N};
@@ -67,12 +70,12 @@ int main() {
   simple_vadd(D, E, F);
   for (unsigned int i = 0; i < array_size; i++) {
     if (C[i] != A[i] + B[i]) {
-      std::cout << "The results are incorrect (element " << i << " is " << C[i]
+      std::cerr << "The results are incorrect (element " << i << " is " << C[i]
                 << "!\n";
       return 1;
     }
     if (F[i] != D[i] + E[i]) {
-      std::cout << "The results are incorrect (element " << i << " is " << F[i]
+      std::cerr << "The results are incorrect (element " << i << " is " << F[i]
                 << "!\n";
       return 1;
     }

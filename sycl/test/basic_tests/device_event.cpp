@@ -63,9 +63,10 @@ int test_strideN(size_t stride) {
         try {
           std::rethrow_exception(ep);
         } catch (std::exception& e) {
-          std::cout << e.what();
+          std::cerr << e.what();
         }
       }
+      throw "ERROR: Asynchronous exception(s)";
     });
 
     buffer<int, 1> out_buf(out_data, range<1>(nElems));
@@ -108,8 +109,8 @@ int test_strideN(size_t stride) {
     });
 
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
-    return 2;
+    std::cerr << "SYCL exception caught: " << e.what();
+    throw;
   }
 
   return check_results(out_data, stride);

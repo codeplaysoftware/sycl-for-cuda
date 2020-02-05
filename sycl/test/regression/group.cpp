@@ -54,7 +54,7 @@ bool group__get_group_range() {
           });
     });
   } catch (cl::sycl::exception const &E) {
-    std::cout << "SYCL exception caught: " << E.what() << '\n';
+    std::cerr << "SYCL exception caught: " << E.what() << '\n';
     return 2;
   }
   const size_t SIZE_Z = GlobalRange.get(0);
@@ -120,7 +120,7 @@ bool group__get_linear_id() {
           });
     });
   } catch (cl::sycl::exception const &E) {
-    std::cout << "SYCL exception caught: " << E.what() << '\n';
+    std::cerr << "SYCL exception caught: " << E.what() << '\n';
     return 2;
   }
   const size_t SIZE_Z = GlobalRange.get(0);
@@ -150,9 +150,9 @@ bool group__get_linear_id() {
         Pass &= Ok;
 
         if (!Ok && ErrCnt++ < 10) {
-          std::cout << "*** ERROR at [" << Z << "][" << Y << "][" << X << "]: ";
-          std::cout << XTest << " " << YTest << " " << ZTest << " != ";
-          std::cout << XGold << " " << YGold << " " << ZGold << "\n";
+          std::cerr << "*** ERROR at [" << Z << "][" << Y << "][" << X << "]: ";
+          std::cerr << XTest << " " << YTest << " " << ZTest << " != ";
+          std::cerr << XGold << " " << YGold << " " << ZGold << "\n";
         }
       }
     }
@@ -168,7 +168,7 @@ int main() {
   Pass &= group__get_linear_id();
 
   if (!Pass) {
-    std::cout << "FAILED\n";
+    std::cerr << "FAILED\n";
     return 1;
   }
   std::cout << "Passed\n";

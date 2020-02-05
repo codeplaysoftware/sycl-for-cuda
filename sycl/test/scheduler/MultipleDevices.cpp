@@ -83,7 +83,7 @@ int multidevice_test(queue MyQueue1, queue MyQueue2) {
     int Expected = D;
 
     if (FinalD[i] != D) {
-      std::cout << "Wrong value for element " << i
+      std::cerr << "Wrong value for element " << i
                 << " Expected: " << Expected << " Got: " << FinalD[i]
                 << std::endl;
       return -1;

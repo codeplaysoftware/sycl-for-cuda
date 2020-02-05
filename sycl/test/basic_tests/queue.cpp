@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
 #include <iostream>
 
@@ -32,6 +33,7 @@ int main() {
 
   } catch (device_error e) {
     std::cout << "Failed to create device for context" << std::endl;
+    throw;
   }
 
   auto devices = device::get_devices();
@@ -42,10 +44,10 @@ int main() {
     queue Queue(deviceA);
     size_t hash = hash_class<queue>()(Queue);
     queue MovedQueue(std::move(Queue));
-    assert(hash == hash_class<queue>()(MovedQueue));
-    assert(deviceA.is_host() == MovedQueue.is_host());
+    CHECK(hash == hash_class<queue>()(MovedQueue));
+    CHECK(deviceA.is_host() == MovedQueue.is_host());
     if (!deviceA.is_host()) {
-      assert(MovedQueue.get() != nullptr);
+      CHECK(MovedQueue.get() != nullptr);
     }
   }
   {
@@ -54,10 +56,10 @@ int main() {
     size_t hash = hash_class<queue>()(Queue);
     queue WillMovedQueue(deviceB);
     WillMovedQueue = std::move(Queue);
-    assert(hash == hash_class<queue>()(WillMovedQueue));
-    assert(deviceA.is_host() == WillMovedQueue.is_host());
+    CHECK(hash == hash_class<queue>()(WillMovedQueue));
+    CHECK(deviceA.is_host() == WillMovedQueue.is_host());
     if (!deviceA.is_host()) {
-      assert(WillMovedQueue.get() != nullptr);
+      CHECK(WillMovedQueue.get() != nullptr);
     }
   }
   {
@@ -65,10 +67,10 @@ int main() {
     queue Queue(deviceA);
     size_t hash = hash_class<queue>()(Queue);
     queue QueueCopy(Queue);
-    assert(hash == hash_class<queue>()(Queue));
-    assert(hash == hash_class<queue>()(QueueCopy));
-    assert(Queue == QueueCopy);
-    assert(Queue.is_host() == QueueCopy.is_host());
+    CHECK(hash == hash_class<queue>()(Queue));
+    CHECK(hash == hash_class<queue>()(QueueCopy));
+    CHECK(Queue == QueueCopy);
+    CHECK(Queue.is_host() == QueueCopy.is_host());
   }
   {
     std::cout << "copy assignment operator" << std::endl;
@@ -76,10 +78,10 @@ int main() {
     size_t hash = hash_class<queue>()(Queue);
     queue WillQueueCopy(deviceB);
     WillQueueCopy = Queue;
-    assert(hash == hash_class<queue>()(Queue));
-    assert(hash == hash_class<queue>()(WillQueueCopy));
-    assert(Queue == WillQueueCopy);
-    assert(Queue.is_host() == WillQueueCopy.is_host());
+    CHECK(hash == hash_class<queue>()(Queue));
+    CHECK(hash == hash_class<queue>()(WillQueueCopy));
+    CHECK(Queue == WillQueueCopy);
+    CHECK(Queue.is_host() == WillQueueCopy.is_host());
   }
 
   {
@@ -88,7 +90,7 @@ int main() {
     try {
       Queue.throw_asynchronous();
     } catch (const std::bad_function_call &e) {
-      std::cout << "Default asynchronous handler call failed: " << e.what()
+      std::cerr << "Default asynchronous handler call failed: " << e.what()
                 << std::endl;
       throw;
     }
@@ -99,7 +101,7 @@ int main() {
     device Device = Selector.select_device();
     context Context(Device);
     queue Queue(Context, Selector);
-    assert(Context == Queue.get_context());
+    CHECK(Context == Queue.get_context());
   }
 
   {

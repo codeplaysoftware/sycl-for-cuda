@@ -306,7 +306,7 @@ int main() {
       });
     }
   } catch (cl::sycl::exception const &e) {
-    std::cout << "SYCL exception caught: " << e.what() << '\n';
+    std::cerr << "SYCL exception caught: " << e.what() << '\n';
     return 2;
   }
 
@@ -314,6 +314,6 @@ int main() {
     std::cout << "Passed\n";
     return 0;
   }
-  std::cout << "FAILED\n";
+  std::cerr << "FAILED\n";
   return 1;
 }

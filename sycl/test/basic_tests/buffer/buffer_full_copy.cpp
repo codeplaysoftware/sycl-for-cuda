@@ -13,7 +13,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "../../helpers.hpp"
 #include <CL/sycl.hpp>
 #include <cassert>
 
@@ -47,9 +47,9 @@ void check_copy_device_to_host(cl::sycl::queue &Queue) {
     for (int i = 0; i < size; ++i) {
       for (int j = 0; j < size; ++j)
         if (offset <= i && i < offset + 2 && offset <= j && j < offset + 2) {
-          assert(acc[i][j] == 15);
+          CHECK(acc[i][j] == 15);
         } else {
-          assert(acc[i][j] == 13);
+          CHECK(acc[i][j] == 13);
         }
     }
   }
@@ -81,7 +81,7 @@ void check_fill(cl::sycl::queue &Queue) {
   {
     auto acc_1 = buf_1.get_access<cl::sycl::access::mode::read>();
     for (int i = 0; i < size; ++i)
-      assert(expected_res_1[i] == acc_1[i]);
+      CHECK(expected_res_1[i] == acc_1[i]);
   }
 }
 
@@ -118,10 +118,10 @@ void check_copy_host_to_device(cl::sycl::queue &Queue) {
 
     // check that there was no data corruption/loss
     for (int i = 0; i < size; ++i)
-      assert(expected_res_1[i] == acc_1[i]);
+      CHECK(expected_res_1[i] == acc_1[i]);
 
     for (int i = 0; i < size / 2; ++i)
-      assert(expected_res_2[i] == acc_2[i]);
+      CHECK(expected_res_2[i] == acc_2[i]);
   }
 
   cl::sycl::buffer<float, 2> buf_3({size, size});
@@ -161,24 +161,21 @@ void check_copy_host_to_device(cl::sycl::queue &Queue) {
     // check that there was no data corruption/loss
     for (int i = 0; i < size; ++i) {
       for (int j = 0; j < size; ++j)
-        assert(expected_res_3[i * size + j] == acc_1[i][j]);
+        CHECK(expected_res_3[i * size + j] == acc_1[i][j]);
     }
 
     for (int i = 0; i < size / 2; ++i)
       for (int j = 0; j < size / 2; ++j)
-        assert(expected_res_4[i * size / 2 + j] == acc_2[i][j]);
+        CHECK(expected_res_4[i * size / 2 + j] == acc_2[i][j]);
   }
 }
 
 int main() {
-  try {
-    cl::sycl::queue Queue;
-    check_copy_host_to_device(Queue);
-    check_copy_device_to_host(Queue);
-    check_fill(Queue);
-  } catch (cl::sycl::exception &ex) {
-    std::cerr << ex.what() << std::endl;
-  }
+  // Not catching exceptions to make test fail instead.
+  cl::sycl::queue Queue;
+  check_copy_host_to_device(Queue);
+  check_copy_device_to_host(Queue);
+  check_fill(Queue);
 
   return 0;
 }

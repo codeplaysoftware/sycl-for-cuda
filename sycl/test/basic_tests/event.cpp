@@ -1,3 +1,7 @@
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out -L %opencl_libs_dir -lOpenCL
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out
 //==--------------- event.cpp - SYCL event test ----------------------------==//
@@ -7,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../helpers.hpp"
 #include <CL/sycl.hpp>
 #include <iostream>
 
@@ -15,7 +20,8 @@ int main() {
     std::cout << "Create default event" << std::endl;
     cl::sycl::event e;
   } catch (cl::sycl::device_error e) {
-    std::cout << "Failed to create device for event" << std::endl;
+    std::cerr << "Failed to create device for event" << std::endl;
+    throw;
   }
   try {
     std::cout << "Try create OpenCL event" << std::endl;
@@ -28,11 +34,10 @@ int main() {
                 << ((cl_e.get() == u_e) ? " matches " : " does not match ")
                 << u_e << std::endl;
 
-    } else {
-      std::cout << "Failed to create OpenCL context" << std::endl;
     }
   } catch (cl::sycl::device_error e) {
-    std::cout << "Failed to create device for context" << std::endl;
+    std::cerr << "Failed to create device for context" << std::endl;
+    throw;
   }
 
   {
@@ -40,7 +45,7 @@ int main() {
     cl::sycl::event Event;
     size_t hash = std::hash<cl::sycl::event>()(Event);
     cl::sycl::event MovedEvent(std::move(Event));
-    assert(hash == std::hash<cl::sycl::event>()(MovedEvent));
+    CHECK(hash == std::hash<cl::sycl::event>()(MovedEvent));
   }
 
   {
@@ -49,7 +54,7 @@ int main() {
     size_t hash = std::hash<cl::sycl::event>()(Event);
     cl::sycl::event WillMovedEvent;
     WillMovedEvent = std::move(Event);
-    assert(hash == std::hash<cl::sycl::event>()(WillMovedEvent));
+    CHECK(hash == std::hash<cl::sycl::event>()(WillMovedEvent));
   }
 
   {
@@ -57,9 +62,9 @@ int main() {
     cl::sycl::event Event;
     size_t hash = std::hash<cl::sycl::event>()(Event);
     cl::sycl::event EventCopy(Event);
-    assert(hash == std::hash<cl::sycl::event>()(Event));
-    assert(hash == std::hash<cl::sycl::event>()(EventCopy));
-    assert(Event == EventCopy);
+    CHECK(hash == std::hash<cl::sycl::event>()(Event));
+    CHECK(hash == std::hash<cl::sycl::event>()(EventCopy));
+    CHECK(Event == EventCopy);
   }
 
   {
@@ -68,9 +73,9 @@ int main() {
     size_t hash = std::hash<cl::sycl::event>()(Event);
     cl::sycl::event WillEventCopy;
     WillEventCopy = Event;
-    assert(hash == std::hash<cl::sycl::event>()(Event));
-    assert(hash == std::hash<cl::sycl::event>()(WillEventCopy));
-    assert(Event == WillEventCopy);
+    CHECK(hash == std::hash<cl::sycl::event>()(Event));
+    CHECK(hash == std::hash<cl::sycl::event>()(WillEventCopy));
+    CHECK(Event == WillEventCopy);
   }
 
   // Check wait and wait_and_throw methods do not crash
@@ -106,4 +111,6 @@ int main() {
     }
     }
   }
+
+  return 0;
 }

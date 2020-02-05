@@ -64,7 +64,7 @@ template <typename T> void check(queue &Queue, size_t G = 240, size_t L = 60) {
       exit_if_not_equal<T>(addacc[j], add, "barrier");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     exit(1);
   }
 }

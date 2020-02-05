@@ -112,7 +112,7 @@ int main() {
       exit_if_not_equal<size_t>(Res, ReqdSize, "compile_sub_group_size");
     }
   } catch (exception e) {
-    std::cout << "SYCL exception caught: " << e.what();
+    std::cerr << "SYCL exception caught: " << e.what();
     return 1;
   }
 

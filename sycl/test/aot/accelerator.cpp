@@ -36,6 +36,7 @@ void simple_vadd(const std::array<T, N>& VA, const std::array<T, N>& VB,
           std::cerr << "Unknown async exception was caught." << std::endl;
         }
       }
+      throw "ERROR: Asynchronous exception(s)";
     });
 
   cl::sycl::range<1> numOfItems{N};
@@ -67,12 +68,12 @@ int main() {
   simple_vadd(D, E, F);
   for (unsigned int i = 0; i < array_size; i++) {
     if (C[i] != A[i] + B[i]) {
-      std::cout << "The results are incorrect (element " << i << " is " << C[i]
+      std::cerr << "The results are incorrect (element " << i << " is " << C[i]
                 << "!\n";
       return 1;
     }
     if (F[i] != D[i] + E[i]) {
-      std::cout << "The results are incorrect (element " << i << " is " << F[i]
+      std::cerr << "The results are incorrect (element " << i << " is " << F[i]
                 << "!\n";
       return 1;
     }
