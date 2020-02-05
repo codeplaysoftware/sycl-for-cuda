@@ -1,5 +1,7 @@
+// REQUIRES: opencl
 // UNSUPPORTED: cuda
-// CUDA is not compatible with the OpenCL image spec.
+// CUDA does not support OpenCL interop.
+// CUDA cannot support OpenCL spec conform images.
 //
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple -I %sycl_source_dir %s -o %t1.out
 // RUN: %clangxx -I %sycl_source_dir %s -o %t3.out -lsycl
