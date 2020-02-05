@@ -1,4 +1,7 @@
+// REQUIRES: opencl
 // UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+// CUDA compilation and runtime do not yet support sub groups.
 
 // RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t.out
 // RUN: env SYCL_DEVICE_TYPE=HOST %t.out

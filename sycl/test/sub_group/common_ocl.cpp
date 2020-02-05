@@ -1,6 +1,7 @@
 // REQUIRES: opencl
 // UNSUPPORTED: cuda
 // CUDA does not support OpenCL interop.
+// CUDA compilation and runtime do not yet support sub groups.
 
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 %S/sg.cl -triple spir64-unknown-unknown -emit-llvm-bc -o %T/kernel_ocl.bc -include opencl-c.h
 // RUN: llvm-spirv %T/kernel_ocl.bc -o %T/kernel_ocl.spv
