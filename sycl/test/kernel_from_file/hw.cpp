@@ -6,8 +6,7 @@
 
 // TODO: InvalidTargetTriple: Expects spir-unknown-unknown or spir64-unknown-unknown. Actual target triple is x86_64-unknown-linux-gnu
 
-// XFAIL: cuda
-// Currently unsupported on cuda as this test specifically tests a SPV path.
+// UNSUPPORTED: cuda
 
 #include <CL/sycl.hpp>
 #include <iostream>
