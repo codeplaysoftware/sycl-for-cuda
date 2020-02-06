@@ -151,14 +151,28 @@ void SYCL::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
 
-  assert((getToolChain().getTriple().getArch() == llvm::Triple::spir ||
-          getToolChain().getTriple().getArch() == llvm::Triple::spir64) &&
+  assert((getToolChain().getTriple().isSPIR() || getToolChain().getTriple().isNVPTX()) &&
          "Unsupported target");
 
   std::string SubArchName = getToolChain().getTriple().getArchName();
 
   // Prefix for temporary file name.
   std::string Prefix = llvm::sys::path::stem(SubArchName);
+
+  // For CUDA, we want to link all BC files before resuming the normal
+  // compilation path
+  if (getToolChain().getTriple().isNVPTX()) {
+    InputInfoList NvptxInputs;
+    for (const auto &II : Inputs) {
+      if (!II.isFilename())
+        continue;
+      NvptxInputs.push_back(II);
+    }
+
+    constructLLVMLinkCommand(C, JA, Output, Args, SubArchName, Prefix,
+                             NvptxInputs);
+    return;
+  }
 
   // We want to use llvm-spirv linker to link spirv binaries before putting
   // them into the fat object.
@@ -528,4 +542,3 @@ void SYCLToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &Args,
                                                  ArgStringList &CC1Args) const {
   HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
-
