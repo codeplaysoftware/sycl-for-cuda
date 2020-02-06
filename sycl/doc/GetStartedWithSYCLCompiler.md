@@ -63,7 +63,7 @@ mkdir %SYCL_HOME%
 **Linux**
 ```bash
 cd $SYCL_HOME
-git clone https://github.com/intel/llvm -b sycl
+git clone https://github.com/codeplaysoftware/sycl-for-cuda -b sycl
 mkdir $SYCL_HOME/build
 cd $SYCL_HOME/build
 
@@ -80,7 +80,7 @@ make -j`nproc` sycl-toolchain
 **Windows (64-bit)**
 ```bat
 cd %SYCL_HOME%
-git clone https://github.com/intel/llvm -b sycl
+git clone https://github.com/codeplaysoftware/sycl-for-cuda -b sycl
 mkdir %SYCL_HOME%\build
 cd %SYCL_HOME%\build
 
