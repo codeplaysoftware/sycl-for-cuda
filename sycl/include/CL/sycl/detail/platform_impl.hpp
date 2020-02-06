@@ -10,6 +10,7 @@
 #include <CL/sycl/detail/common.hpp>
 #include <CL/sycl/detail/force_device.hpp>
 #include <CL/sycl/detail/pi.hpp>
+#include <CL/sycl/detail/platform_info.hpp>
 #include <CL/sycl/info/info_desc.hpp>
 #include <CL/sycl/stl.hpp>
 
@@ -63,6 +64,13 @@ public:
 
   /// @return true if this SYCL platform is a host platform.
   bool is_host() const { return MHostPlatform; };
+
+  bool is_cuda() const {
+    const string_class CUDA_PLATFORM_STRING = "NVIDIA_CUDA";
+    const string_class PlatformName = get_platform_info<string_class, 
+                                                  info::platform::name>::get(MPlatform);
+    return PlatformName == CUDA_PLATFORM_STRING;
+  }
 
   /// @return an instance of OpenCL cl_platform_id.
   cl_platform_id get() const {

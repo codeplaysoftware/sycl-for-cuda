@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <CL/sycl.hpp>
 #include <CL/sycl/detail/pi.hpp>
 #include <gtest/gtest.h>
 #include <vector>
@@ -73,7 +74,7 @@ TEST_F(PlatformTest, piPlatformGetInfo) {
         (PI_CALL_NOCHECK(piPlatformGetInfo)(platform, info, param_value.size(),
                                             param_value.data(), nullptr)),
         PI_SUCCESS)
-        << "piPlatformGetInfo for " << RT::platformInfoToString(info)
+        << "piPlatformGetInfo for " << detail::pi::platformInfoToString(info)
         << " failed.\n";
 
     const auto returned_string_length = strlen(param_value.data()) + 1;

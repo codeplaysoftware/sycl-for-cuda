@@ -32,7 +32,7 @@ kernel_impl::kernel_impl(RT::PiKernel Kernel, ContextImplPtr ContextImpl,
       MCreatedFromSource(IsCreatedFromSource) {
 
   RT::PiContext Context = nullptr;
-  PI_CALL(piKernelGetInfo)(MKernel, CL_KERNEL_CONTEXT, sizeof(Context),
+  PI_CALL(piKernelGetInfo)(MKernel, PI_KERNEL_INFO_CONTEXT, sizeof(Context),
                            &Context, nullptr);
   if (ContextImpl->getHandleRef() != Context)
     throw cl::sycl::invalid_parameter_error(
