@@ -452,7 +452,7 @@ pi_result OCL(piextGetDeviceFunctionPointer)(pi_device device,
 }
 
 pi_result OCL(piContextCreate)(
-    const cl_context_properties *properties, // TODO: untie from OpenCL
+    const pi_context_properties *properties,
     pi_uint32 num_devices, const pi_device *devices,
     void (*pfn_notify)(const char *errinfo, const void *private_info, size_t cb,
                        void *user_data1),
