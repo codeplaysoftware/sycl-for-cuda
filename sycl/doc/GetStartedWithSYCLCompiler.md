@@ -119,7 +119,10 @@ should be used.
 
 ## Build SYCL toolchain with support for NVIDIA CUDA
 
-There is experimental support for SYCL for CUDA devices.
+There is experimental support for SYCL for CUDA devices, 
+currently in the **cuda** branch. 
+The code of both branches is considered unstable until
+https://github.com/intel/llvm/pull/1091 is merged upstream.
 
 To enable support for CUDA devices, the following arguments need to be added to 
 the CMake command when building the SYCL compiler.
