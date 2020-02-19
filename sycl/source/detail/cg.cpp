@@ -34,4 +34,4 @@ cl_mem interop_handler::getMemImpl(detail::Requirement* Req) const {
   }
 
 }  // sycl
-}  // sycl
+}  // cl

@@ -87,7 +87,7 @@ public:
   // releaseHostAccessor is called.
   // Returns an event which indicates when these nodes are completed and host
   // accessor is ready for using.
-  EventImplPtr addHostAccessor(Requirement *Req, const bool destructor = false);
+  EventImplPtr addHostAccessor(Requirement *Req, const bool Destructor = false);
 
   // Unblocks operations with the memory object.
   void releaseHostAccessor(Requirement *Req);
