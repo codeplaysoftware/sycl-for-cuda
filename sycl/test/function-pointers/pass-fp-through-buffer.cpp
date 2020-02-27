@@ -5,7 +5,8 @@
 // FIXME: This test should use runtime early exit once correct check for
 // corresponding extension is implemented
 // UNSUPPORTED: windows
-// XFAIL: cuda
+// UNSUPPORTED: cuda
+// CUDA does not support the function pointer as kernel argument extension.
 
 #include <CL/sycl.hpp>
 

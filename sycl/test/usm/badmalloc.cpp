@@ -5,6 +5,7 @@
 
 // UNSUPPORTED: windows
 // XFAIL: cuda
+// CUDA does not support USM.
 
 //==----------------- badmalloc.cpp - Bad Mallocs test ---------------------==//
 //
