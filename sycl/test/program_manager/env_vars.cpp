@@ -1,4 +1,9 @@
-// RUN: %clangxx -O0 -fsycl %s -o %t.out -lsycl
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support online compilation/linking.
+// CUDA does not support OpenCL linker options.
+//
+// RUN: %clangxx -O0 -fsycl -fsycl-targets=%sycl_triple %s -o %t.out -lsycl
 //
 // Deprecated SYCL_PROGRAM_BUILD_OPTIONS should work as an alias to
 // SYCL_PROGRAM_COMPILE_OPTIONS:

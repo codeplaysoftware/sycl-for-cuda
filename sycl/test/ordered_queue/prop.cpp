@@ -1,4 +1,8 @@
-// RUN: %clangxx -fsycl %s -o %t1.out -L %opencl_libs_dir -lOpenCL
+// REQUIRES: opencl
+// UNSUPPORTED: cuda
+// CUDA does not support OpenCL interop.
+//
+// RUN: %clangxx -fsycl -fsycl-targets=%sycl_triple %s -o %t1.out -L %opencl_libs_dir -lOpenCL
 // RUN: %CPU_RUN_PLACEHOLDER %t1.out
 // RUN: %GPU_RUN_PLACEHOLDER %t1.out
 
