@@ -26,6 +26,9 @@
 #include <vector>
 #include <functional>
 #include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <queue>
 
 extern "C" {
 
@@ -45,8 +48,48 @@ pi_result cuda_piKernelRelease(pi_kernel);
 
 }
 
+class worker {
+public:
+  worker()
+      : workQueue_{}, workQueueGateMutex_{}, workQueueGate_{},
+        workerThread_{&worker::execute, this} {}
+
+  ~worker() {
+    enqueue_work(work{work::kind::terminate, nullptr});
+    workerThread_.join();
+  }
+
+  void enqueue_complete_event(pi_event event) {
+    enqueue_work(work{work::kind::complete_event, event});
+  }
+
+private:
+  struct work {
+    enum kind { complete_event, terminate } kind_;
+    void *content_;
+
+    work(kind k, void *c) : kind_{k}, content_{c} {}
+  };
+
+  void enqueue_work(work w) {
+    std::unique_lock<std::mutex> lock(workQueueGateMutex_);
+    workQueue_.push(w);
+    workQueueGate_.notify_one();
+  }
+
+  void complete_event(pi_event event);
+
+  void execute();
+
+  std::queue<work> workQueue_;
+  std::mutex workQueueGateMutex_;
+  std::condition_variable workQueueGate_;
+  std::thread workerThread_;
+};
+
 struct _pi_platform {
   std::vector<std::unique_ptr<_pi_device>> devices_;
+  worker worker_;
 };
 
 struct _pi_device {

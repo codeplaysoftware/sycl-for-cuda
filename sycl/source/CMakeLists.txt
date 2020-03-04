@@ -27,12 +27,16 @@ function(add_sycl_rt_library LIB_NAME)
       set_target_properties(${LIB_NAME} PROPERTIES LINK_DEPENDS ${linker_script})
   endif()
 
+  find_package(Threads REQUIRED)
+  set_property(TARGET ${LIB_NAME} PROPERTY LINK_WHAT_YOU_USE TRUE)
+
   target_include_directories(
       ${LIB_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} "${sycl_inc_dir}")
   target_link_libraries(${LIB_NAME}
       PRIVATE OpenCL::Headers
       PRIVATE ${OpenCL_LIBRARIES}
       PRIVATE ${CMAKE_DL_LIBS}
+      PRIVATE Threads::Threads
   )
 
   add_common_options(${LIB_NAME})

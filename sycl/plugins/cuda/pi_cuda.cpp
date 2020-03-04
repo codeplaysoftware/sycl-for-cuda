@@ -97,6 +97,31 @@ pi_result cuda_piEventRetain(pi_event event);
 
 } // extern "C"
 
+void worker::execute() {
+  bool Terminate = false;
+  while (!Terminate) {
+    std::unique_lock<std::mutex> lock(workQueueGateMutex_);
+    workQueueGate_.wait(lock);
+    while(!workQueue_.empty()) {
+      work item = workQueue_.front();
+      workQueue_.pop();
+      switch (item.kind_) {
+      case work::kind::complete_event:
+        complete_event(static_cast<pi_event>(item.content_));
+        break;
+      case work::kind::terminate:
+        Terminate = true;
+        break;
+      }
+    }
+  }
+}
+
+void worker::complete_event(pi_event event) {
+  event->set_event_complete();
+  cuda_piEventRelease(event);
+}
+
 _pi_event::_pi_event(pi_command_type type, pi_context context, pi_queue queue)
     : commandType_{type}, refCount_{1}, isCompleted_{false},
       isRecorded_{false},
@@ -172,8 +197,8 @@ pi_result _pi_event::record() {
       try {
         result = PI_CHECK_ERROR(cuLaunchHostFunc(cuStream, [](void *userData) {
           pi_event event = reinterpret_cast<pi_event>(userData);
-          event->set_event_complete();
-          cuda_piEventRelease(event);
+          pi_platform platform = event->get_context()->get_device()->platform_;
+          platform->worker_.enqueue_complete_event(event);
         }, this));
       } catch (...) {
 

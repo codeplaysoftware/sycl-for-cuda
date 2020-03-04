@@ -4,6 +4,8 @@ message(STATUS "Including the PI API CUDA backend.")
  # we only require the CUDA driver API to be used
  # CUDA_CUDA_LIBRARY variable defines the path to libcuda.so, the CUDA Driver API library.
 
+find_package(Threads REQUIRED)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(CUDA 10.0 REQUIRED)
 
 add_library(cudadrv SHARED IMPORTED)
@@ -33,7 +35,7 @@ target_include_directories(pi_cuda PRIVATE "${sycl_inc_dir}")
 
 target_include_directories(pi_cuda INTERFACE ${CUDA_INCLUDE_DIRS})
 
-target_link_libraries(pi_cuda PUBLIC OpenCL-Headers cudadrv)
+target_link_libraries(pi_cuda PUBLIC OpenCL-Headers cudadrv Threads::Threads)
 
 target_link_libraries(sycl INTERFACE pi_cuda)
 
