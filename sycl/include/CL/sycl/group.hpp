@@ -276,7 +276,7 @@ public:
     using DestT = detail::ConvertToOpenCLType_t<decltype(dest)>;
     using SrcT = detail::ConvertToOpenCLType_t<decltype(src)>;
 
-    __ocl_event_t e = OpGroupAsyncCopyGlobalToLocal<T>(
+    __ocl_event_t e = OpGroupAsyncCopyGlobalToLocal(
         __spv::Scope::Workgroup, DestT(dest.get()), SrcT(src.get()),
         numElements, 1, 0);
     return device_event(&e);
@@ -290,7 +290,7 @@ public:
     using DestT = detail::ConvertToOpenCLType_t<decltype(dest)>;
     using SrcT = detail::ConvertToOpenCLType_t<decltype(src)>;
 
-    __ocl_event_t e = OpGroupAsyncCopyLocalToGlobal<T>(
+    __ocl_event_t e = OpGroupAsyncCopyLocalToGlobal(
         __spv::Scope::Workgroup, DestT(dest.get()), SrcT(src.get()),
         numElements, 1, 0);
     return device_event(&e);
@@ -305,7 +305,7 @@ public:
     using DestT = detail::ConvertToOpenCLType_t<decltype(dest)>;
     using SrcT = detail::ConvertToOpenCLType_t<decltype(src)>;
 
-    __ocl_event_t e = OpGroupAsyncCopyGlobalToLocal<T>(
+    __ocl_event_t e = OpGroupAsyncCopyGlobalToLocal(
         __spv::Scope::Workgroup, DestT(dest.get()), SrcT(src.get()),
         numElements, srcStride, 0);
     return device_event(&e);
@@ -320,7 +320,7 @@ public:
     using DestT = detail::ConvertToOpenCLType_t<decltype(dest)>;
     using SrcT = detail::ConvertToOpenCLType_t<decltype(src)>;
 
-    __ocl_event_t e = OpGroupAsyncCopyLocalToGlobal<T>(
+    __ocl_event_t e = OpGroupAsyncCopyLocalToGlobal(
         __spv::Scope::Workgroup, DestT(dest.get()), SrcT(src.get()),
         numElements, destStride, 0);
     return device_event(&e);
