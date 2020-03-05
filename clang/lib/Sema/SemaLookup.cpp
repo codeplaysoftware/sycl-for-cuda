@@ -688,21 +688,22 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
 /// \param ArgTypes (out) List of the possible argument types.  For each
 ///        argument, ArgTypes contains QualTypes for the Cartesian product
 ///        of (vector sizes) x (types) .
+template<typename ProgModel>
 static void GetQualTypesForOpenCLBuiltin(
-    ASTContext &Context, const OpenCLBuiltinStruct &OpenCLBuiltin,
+  ASTContext &Context, const typename ProgModel::BuiltinStruct &Builtin,
     unsigned &GenTypeMaxCnt, SmallVector<QualType, 1> &RetTypes,
     SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
   // Get the QualType instances of the return types.
-  unsigned Sig = SignatureTable[OpenCLBuiltin.SigTableIndex];
-  OCL2Qual(Context, TypeTable[Sig], RetTypes);
+  unsigned Sig = ProgModel::SignatureTable[Builtin.SigTableIndex];
+  ProgModel::Bultin2Qual(Context, ProgModel::TypeTable[Sig], RetTypes);
   GenTypeMaxCnt = RetTypes.size();
 
   // Get the QualType instances of the arguments.
   // First type is the return type, skip it.
-  for (unsigned Index = 1; Index < OpenCLBuiltin.NumTypes; Index++) {
+  for (unsigned Index = 1; Index < Builtin.NumTypes; Index++) {
     SmallVector<QualType, 1> Ty;
-    OCL2Qual(Context,
-        TypeTable[SignatureTable[OpenCLBuiltin.SigTableIndex + Index]], Ty);
+    ProgModel::Bultin2Qual(Context,
+        ProgModel::TypeTable[ProgModel::SignatureTable[Builtin.SigTableIndex + Index]], Ty);
     GenTypeMaxCnt = (Ty.size() > GenTypeMaxCnt) ? Ty.size() : GenTypeMaxCnt;
     ArgTypes.push_back(std::move(Ty));
   }
@@ -747,10 +748,11 @@ static void GetOpenCLBuiltinFctOverloads(
 /// \param S (in/out) The Sema instance.
 /// \param BIDecl (in) Description of the builtin.
 /// \param FDecl (in/out) FunctionDecl instance.
-static void AddOpenCLExtensions(Sema &S, const OpenCLBuiltinStruct &BIDecl,
+template<typename ProgModel>
+static void AddOpenCLExtensions(Sema &S, const typename ProgModel::BuiltinStruct &BIDecl,
                                 FunctionDecl *FDecl) {
   // Fetch extension associated with a function prototype.
-  StringRef E = FunctionExtensionTable[BIDecl.Extension];
+  StringRef E = ProgModel::FunctionExtensionTable[BIDecl.Extension];
   if (E != "")
     S.setOpenCLExtensionForDecl(FDecl, E);
 }
@@ -764,7 +766,9 @@ static void AddOpenCLExtensions(Sema &S, const OpenCLBuiltinStruct &BIDecl,
 /// \param II (in) The identifier being resolved.
 /// \param FctIndex (in) Starting index in the BuiltinTable.
 /// \param Len (in) The signature list has Len elements.
-static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
+template<typename ProgModel>
+static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, unsigned BuiltinSetVersion,
+                                                  LookupResult &LR,
                                                   IdentifierInfo *II,
                                                   const unsigned FctIndex,
                                                   const unsigned Len) {
@@ -776,25 +780,24 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
   unsigned GenTypeMaxCnt;
 
   for (unsigned SignatureIndex = 0; SignatureIndex < Len; SignatureIndex++) {
-    const OpenCLBuiltinStruct &OpenCLBuiltin =
-        BuiltinTable[FctIndex + SignatureIndex];
+    const typename ProgModel::BuiltinStruct &OpenCLBuiltin =
+        ProgModel::BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
     // Ignore this BIF if its version does not match the language options.
-    unsigned OpenCLVersion = Context.getLangOpts().OpenCLVersion;
-    if (Context.getLangOpts().OpenCLCPlusPlus)
-      OpenCLVersion = 200;
-    if (OpenCLVersion < OpenCLBuiltin.MinVersion)
-      continue;
-    if ((OpenCLBuiltin.MaxVersion != 0) &&
-        (OpenCLVersion >= OpenCLBuiltin.MaxVersion))
-      continue;
+    if (BuiltinSetVersion) {
+      if (BuiltinSetVersion < OpenCLBuiltin.MinVersion)
+        continue;
+      if ((OpenCLBuiltin.MaxVersion != 0) &&
+          (BuiltinSetVersion >= OpenCLBuiltin.MaxVersion))
+        continue;
+    }
 
     SmallVector<QualType, 1> RetTypes;
     SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;
 
     // Obtain QualType lists for the function signature.
-    GetQualTypesForOpenCLBuiltin(Context, OpenCLBuiltin, GenTypeMaxCnt,
+    GetQualTypesForOpenCLBuiltin<ProgModel>(Context, OpenCLBuiltin, GenTypeMaxCnt,
                                  RetTypes, ArgTypes);
     if (GenTypeMaxCnt > 1) {
       HasGenType = true;
@@ -843,7 +846,7 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
       if (!S.getLangOpts().OpenCLCPlusPlus)
         NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
 
-      AddOpenCLExtensions(S, OpenCLBuiltin, NewOpenCLBuiltin);
+      AddOpenCLExtensions<ProgModel>(S, OpenCLBuiltin, NewOpenCLBuiltin);
 
       LR.addDecl(NewOpenCLBuiltin);
     }
@@ -878,10 +881,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
       if (getLangOpts().OpenCL && getLangOpts().DeclareOpenCLBuiltins) {
-        auto Index = isOpenCLBuiltin(II->getName());
+        auto Index = OpenCLBuiltin::isBuiltin(II->getName());
         if (Index.first) {
-          InsertOCLBuiltinDeclarationsFromTable(*this, R, II, Index.first - 1,
-                                                Index.second);
+          unsigned OpenCLVersion = Context.getLangOpts().OpenCLVersion;
+          if (Context.getLangOpts().OpenCLCPlusPlus)
+            OpenCLVersion = 200;
+          InsertOCLBuiltinDeclarationsFromTable<OpenCLBuiltin>(
+            *this, OpenCLVersion, R, II, Index.first - 1, Index.second);
           return true;
         }
       }
