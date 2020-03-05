@@ -893,6 +893,16 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         }
       }
 
+      // Check if this is a SPIR-V Builtin, and if so, insert its overloads.
+      if (getLangOpts().DeclareSPIRVBuiltins) {
+        auto Index = SPIRVBuiltin::isBuiltin(II->getName());
+        if (Index.first) {
+          InsertOCLBuiltinDeclarationsFromTable<SPIRVBuiltin>(
+            *this, 0, R, II, Index.first - 1, Index.second);
+          return true;
+        }
+      }
+
       // If this is a builtin on this (or all) targets, create the decl.
       if (unsigned BuiltinID = II->getBuiltinID()) {
         // In C++ and OpenCL (spec v1.2 s6.9.f), we don't have any predefined
