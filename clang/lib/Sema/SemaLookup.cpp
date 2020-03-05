@@ -48,6 +48,7 @@
 #include <vector>
 
 #include "OpenCLBuiltins.inc"
+#include "SPIRVBuiltins.inc"
 
 using namespace clang;
 using namespace sema;

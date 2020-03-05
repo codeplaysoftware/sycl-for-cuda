@@ -847,3 +847,8 @@ void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
   BuiltinNameEmitter NameChecker(Records, OS, "OpenCL");
   NameChecker.Emit();
 }
+
+void clang::EmitClangSPIRVBuiltins(RecordKeeper &Records, raw_ostream &OS) {
+  BuiltinNameEmitter NameChecker(Records, OS, "SPIRV");
+  NameChecker.Emit();
+}
