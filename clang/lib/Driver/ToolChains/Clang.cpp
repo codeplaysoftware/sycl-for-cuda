@@ -4081,6 +4081,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (UseSYCLTriple) {
     // We want to compile sycl kernels.
     CmdArgs.push_back("-fsycl-is-device");
+    CmdArgs.push_back("-fdeclare-spirv-builtins");
     // Pass the triple of host when doing SYCL
     auto AuxT = llvm::Triple(llvm::sys::getProcessTriple());
     std::string NormalizedTriple = AuxT.normalize();

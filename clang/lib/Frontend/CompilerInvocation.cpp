@@ -2558,6 +2558,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
   Opts.DeclareOpenCLBuiltins = Args.hasArg(OPT_fdeclare_opencl_builtins);
+  Opts.DeclareSPIRVBuiltins = Args.hasArg(OPT_fdeclare_spirv_builtins);
 
   llvm::Triple T(TargetOpts.Triple);
   CompilerInvocation::setLangDefaults(Opts, IK, T, PPOpts, LangStd);
