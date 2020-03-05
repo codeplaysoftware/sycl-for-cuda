@@ -27,51 +27,6 @@ template <typename SampledType, typename TempRetT, typename TempArgT>
 extern TempRetT __spirv_ImageSampleExplicitLod(SampledType, TempArgT, int,
                                                float);
 
-#ifdef __SYCL_NVPTX__ 
-
-//
-// This a workaround to avoid a SPIR-V ABI issue. 
-//
-
-template <typename dataT>
-__ocl_event_t __spirv_GroupAsyncCopy(__spv::Scope Execution,
-                                     __attribute__((opencl_local)) dataT *Dest,
-                                     __attribute__((opencl_global)) dataT *Src,
-                                     size_t NumElements, size_t Stride,
-                                     __ocl_event_t E) noexcept {
-  for (int i = 0; i < NumElements; i++) {
-    Dest[i] = Src[i * Stride];
-  }
-
-  return E;
-}
-
-template <typename dataT>
-__ocl_event_t __spirv_GroupAsyncCopy(__spv::Scope Execution,
-                                     __attribute__((opencl_global)) dataT *Dest,
-                                     __attribute__((opencl_local)) dataT *Src,
-                                     size_t NumElements, size_t Stride,
-                                     __ocl_event_t E) noexcept {
-  for (int i = 0; i < NumElements; i++) {
-    Dest[i * Stride] = Src[i];
-  }
-
-  return E;
-}
-#else
-template <typename dataT>
-extern __ocl_event_t __spirv_GroupAsyncCopy(
-    __spv::Scope Execution, __attribute__((opencl_local)) dataT *Dest,
-    __attribute__((opencl_global)) dataT *Src, size_t NumElements, size_t Stride,
-    __ocl_event_t E) noexcept;
-
-template <typename dataT>
-extern __ocl_event_t __spirv_GroupAsyncCopy(
-    __spv::Scope Execution, __attribute__((opencl_global)) dataT *Dest,
-    __attribute__((opencl_local)) dataT *Src, size_t NumElements, size_t Stride,
-    __ocl_event_t E) noexcept;
-#endif
-
 #define OpGroupAsyncCopyGlobalToLocal __spirv_GroupAsyncCopy
 #define OpGroupAsyncCopyLocalToGlobal __spirv_GroupAsyncCopy
 
@@ -274,7 +229,7 @@ extern void __spirv_ocl_prefetch(const __attribute__((opencl_global)) char *Ptr,
 
 template <typename dataT>
 extern __ocl_event_t
-OpGroupAsyncCopyGlobalToLocal(__spv::Scope Execution, dataT *Dest, dataT *Src,
+OpGroupAsyncCopyGlobalToLocal(int Execution, dataT *Dest, dataT *Src,
                               size_t NumElements, size_t Stride,
                               __ocl_event_t E) noexcept {
   for (size_t i = 0; i < NumElements; i++) {
@@ -286,7 +241,7 @@ OpGroupAsyncCopyGlobalToLocal(__spv::Scope Execution, dataT *Dest, dataT *Src,
 
 template <typename dataT>
 extern __ocl_event_t
-OpGroupAsyncCopyLocalToGlobal(__spv::Scope Execution, dataT *Dest, dataT *Src,
+OpGroupAsyncCopyLocalToGlobal(int Execution, dataT *Dest, dataT *Src,
                               size_t NumElements, size_t Stride,
                               __ocl_event_t E) noexcept {
   for (size_t i = 0; i < NumElements; i++) {

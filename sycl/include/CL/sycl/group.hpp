@@ -265,8 +265,8 @@ public:
                                      global_ptr<dataT> src,
                                      size_t numElements) const {
     __ocl_event_t e =
-        OpGroupAsyncCopyGlobalToLocal<dataT>(
-            __spv::Scope::Workgroup,
+        OpGroupAsyncCopyGlobalToLocal(
+          static_cast<int>(__spv::Scope::Workgroup),
             dest.get(), src.get(), numElements, 1, 0);
     return device_event(&e);
   }
@@ -276,8 +276,8 @@ public:
                                      local_ptr<dataT> src,
                                      size_t numElements) const {
     __ocl_event_t e =
-        OpGroupAsyncCopyLocalToGlobal<dataT>(
-            __spv::Scope::Workgroup,
+        OpGroupAsyncCopyLocalToGlobal(
+          static_cast<int>(__spv::Scope::Workgroup),
             dest.get(), src.get(), numElements, 1, 0);
     return device_event(&e);
   }
@@ -288,8 +288,8 @@ public:
                                      size_t numElements,
                                      size_t srcStride) const {
     __ocl_event_t e =
-        OpGroupAsyncCopyGlobalToLocal<dataT>(
-            __spv::Scope::Workgroup,
+        OpGroupAsyncCopyGlobalToLocal(
+          static_cast<int>(__spv::Scope::Workgroup),
             dest.get(), src.get(), numElements, srcStride, 0);
     return device_event(&e);
   }
@@ -300,8 +300,8 @@ public:
                                      size_t numElements,
                                      size_t destStride) const {
     __ocl_event_t e =
-        OpGroupAsyncCopyLocalToGlobal<dataT>(
-            __spv::Scope::Workgroup,
+        OpGroupAsyncCopyLocalToGlobal(
+          static_cast<int>(__spv::Scope::Workgroup),
             dest.get(), src.get(), numElements, destStride, 0);
     return device_event(&e);
   }
