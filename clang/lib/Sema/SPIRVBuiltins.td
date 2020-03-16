@@ -33,15 +33,23 @@ def CL20  : Version<200>;
 class AddressSpace<string _AS> {
   string Name = _AS;
 }
-// FIXME: this should really be clang::LangAS::opencl_*
-// There is an implicit switch with -fsycl-is-device to
-// make opencl_* attributes fallback to clang::LangAS::sycl_*
 def DefaultAS    : AddressSpace<"clang::LangAS::Default">;
-def PrivateAS    : AddressSpace<"clang::LangAS::sycl_private">;
-def GlobalAS     : AddressSpace<"clang::LangAS::sycl_global">;
-def ConstantAS   : AddressSpace<"clang::LangAS::sycl_constant">;
-def LocalAS      : AddressSpace<"clang::LangAS::sycl_local">;
-def GenericAS    : AddressSpace<"clang::LangAS::sycl_generic">;
+def PrivateAS    : AddressSpace<"clang::LangAS::opencl_private">;
+def GlobalAS     : AddressSpace<"clang::LangAS::opencl_global">;
+def ConstantAS   : AddressSpace<"clang::LangAS::opencl_constant">;
+def LocalAS      : AddressSpace<"clang::LangAS::opencl_local">;
+def GenericAS    : AddressSpace<"clang::LangAS::opencl_generic">;
+// def PrivateAS    : AddressSpace<"clang::LangAS::sycl_private">;
+// def GlobalAS     : AddressSpace<"clang::LangAS::sycl_global">;
+// def ConstantAS   : AddressSpace<"clang::LangAS::sycl_constant">;
+// def LocalAS      : AddressSpace<"clang::LangAS::sycl_local">;
+// def GenericAS    : AddressSpace<"clang::LangAS::sycl_generic">;
+// def DefaultAS    : AddressSpace<"">;
+// def PrivateAS    : AddressSpace<"__private">;
+// def GlobalAS     : AddressSpace<"__global">;
+// def ConstantAS   : AddressSpace<"__constant">;
+// def LocalAS      : AddressSpace<"__local">;
+// def GenericAS    : AddressSpace<"__generic">;
 
 // OpenCL language extension.
 class AbstractExtension<string _Ext> {
@@ -299,7 +307,10 @@ SPVBuiltin<"ocl_" # _Name, _Signature, _Attributes> {}
 
 // OpenCL v1.0/1.2/2.0 s6.1.1: Built-in Scalar Data Types.
 def Bool      : IntType<"bool",   QualType<"BoolTy">, 8>;
-def Char      : IntType<"char",      QualType<"CharTy", 0, 1>, 8>;
+def TrueChar      : IntType<"char",      QualType<"CharTy", 0, 1>, 8>;
+//def Char      : IntType<"char",      QualType<"CharTy", 0, 1>, 8>;
+def Char      : IntType<"schar",      QualType<"SignedCharTy", 0, 1>, 8>;
+def SChar     : IntType<"schar",     QualType<"SignedCharTy", 0, 1>, 8>;
 def UChar     : UIntType<"uchar",     QualType<"UnsignedCharTy">, 8>;
 def Short     : IntType<"short",     QualType<"ShortTy", 0, 1>, 16>;
 def UShort    : UIntType<"ushort",    QualType<"UnsignedShortTy">, 16>;
@@ -309,7 +320,8 @@ def Long      : IntType<"long",      QualType<"LongTy", 0, 1>, 64>;
 def ULong     : UIntType<"ulong",     QualType<"UnsignedLongTy">, 64>;
 def Float     : FPType<"float",     QualType<"FloatTy">, 32>;
 def Double    : FPType<"double",    QualType<"DoubleTy">, 64>;
-def Half      : FPType<"half",      QualType<"HalfTy">, 16>;
+//def Half      : FPType<"half",      QualType<"HalfTy">, 16>;
+def Half      : FPType<"half",      QualType<"Float16Ty">, 16>;
 def Void      : Type<"void",      QualType<"VoidTy">>;
 // FIXME: ensure this is portable...
 def Size      : Type<"size_t",    QualType<"getSizeType()">>;
@@ -360,19 +372,22 @@ def Vec1234     : IntList<"Vec1234", [1, 2, 3, 4]>;
 def TLAll           : TypeList<[Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
 def TLAllUnsigned   : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
 def TLFloat         : TypeList<[Float, Double, Half]>;
+// Fixme: handle properly char (signed or unsigned depending on host)
 def TLSignedInts    : TypeList<[Char, Short, Int, Long]>;
 def TLUnsignedInts  : TypeList<[UChar, UShort, UInt, ULong]>;
+
+// Signed to Unsigned conversion
+// Fixme: handle properly char (signed or unsigned depending on host)
+def TLSToUSignedInts    : TypeList<[Char, Short, Int, Long]>;
+def TLSToUUnsignedInts  : TypeList<[UChar, UShort, UInt, ULong]>;
 
 def TLIntLongFloats : TypeList<[Int, UInt, Long, ULong, Float, Double, Half]>;
 
 // All unsigned integer types twice, to facilitate unsigned return types for e.g.
 // uchar abs(char) and
 // uchar abs(uchar).
-def TLAllUIntsTwice : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
-def TLAllSToUIntsTwice : TypeList<[UChar, Char, UShort, Short, UInt, Int, ULong, Long]>;
+def TLAllUIntsTwice : TypeList<[UChar, UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
 
-def TLAllUInts       : TypeList<[UChar, UShort, UInt, ULong]>;
-def TLAllSInts       : TypeList<[Char, Short, Int, Long]>;
 def TLAllInts       : TypeList<[Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
 
 // GenType definitions for multiple base types (e.g. all floating point types,
@@ -384,13 +399,11 @@ def AGenTypeNNoScalar      : GenericType<"AGenTypeNNoScalar", TLAll, VecNoScalar
 // All integer
 def AIGenType1             : GenericType<"AIGenType1", TLAllInts, Vec1>;
 def AIGenTypeN             : GenericType<"AIGenTypeN", TLAllInts, VecAndScalar>;
-def AUIGenTypeN             : GenericType<"AUIGenTypeN", TLAllUInts, VecAndScalar>;
-def ASIGenTypeN             : GenericType<"ASIGenTypeN", TLAllSInts, VecAndScalar>;
+def AUIGenTypeN             : GenericType<"AUIGenTypeN", TLUnsignedInts, VecAndScalar>;
+def ASIGenTypeN             : GenericType<"ASIGenTypeN", TLSignedInts, VecAndScalar>;
 def AIGenTypeNNoScalar     : GenericType<"AIGenTypeNNoScalar", TLAllInts, VecNoScalar>;
 // All integer to unsigned
 def AI2UGenTypeN           : GenericType<"AI2UGenTypeN", TLAllUIntsTwice, VecAndScalar>;
-// All signed integer to unsigned
-def AS2UGenTypeN           : GenericType<"AS2UGenTypeN", TLAllSToUIntsTwice, VecAndScalar>;
 // Signed integer
 def SGenTypeN              : GenericType<"SGenTypeN", TLSignedInts, VecAndScalar>;
 // Unsigned integer
@@ -402,7 +415,7 @@ def IntLongFloatGenType1   : GenericType<"IntLongFloatGenType1", TLIntLongFloats
 
 // GenType definitions for every single base type (e.g. fp32 only).
 // Names are like: GenTypeFloatVecAndScalar.
-foreach Type = [Char, UChar, Short, UShort,
+foreach Type = [Bool, Char, UChar, Short, UShort,
                 Int, UInt, Long, ULong,
                 Float, Double, Half] in {
   foreach VecSizes = [VecAndScalar, VecNoScalar] in {
@@ -419,8 +432,1909 @@ foreach Type = [Float, Double, Half] in {
                           TypeList<[Type]>, Vec1234>;
 }
 
+
+// extinst.opencl.std.100.grammar.json
+
+// 2.1. Math extended instructions
+
+// 1 argument builtins
+
+foreach name = ["acos"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["acosh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["acospi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["asin"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["asinh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["asinpi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["atan"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["atan2"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["atanh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["atanpi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["atan2pi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["cbrt"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["ceil"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["copysign"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["cos"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["cosh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["cospi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["erfc"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["erf"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["exp"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["exp2"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["exp10"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["expm1"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fabs"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fdim"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["floor"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fma"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fmax"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fmin"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fmod"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach name = ["fract"] in {
+    def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, PointerType<FGenTypeN, AS>]>;
+  }
+
+  foreach name = ["frexp"] in {
+    foreach Type = [GenTypeFloatVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeHalfVecAndScalar] in {
+      def : OCLSPVBuiltin<name, [Type, Type, PointerType<GenTypeIntVecAndScalar, AS>]>;
+    }
+  }
+}
+
+foreach name = ["hypot"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["ilogb"] in {
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeFloatVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeDoubleVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeHalfVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["ldexp"] in {
+  foreach Type = [GenTypeFloatVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeHalfVecAndScalar] in {
+    def : OCLSPVBuiltin<name, [Type, Type, GenTypeIntVecAndScalar]>;
+    def : OCLSPVBuiltin<name, [Type, Type, GenTypeUIntVecAndScalar]>;
+  }
+}
+
+foreach name = ["lgamma"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach Type = [GenTypeFloatVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeHalfVecAndScalar] in {
+    foreach name = ["lgamma_r"] in {
+      def : OCLSPVBuiltin<name, [Type, Type, PointerType<GenTypeIntVecAndScalar, AS>]>;
+    }
+  }
+}
+
+foreach name = ["log"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["log2"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["log10"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["log1p"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["logb"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["mad"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["maxmag"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["minmag"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach name = ["modf"] in {
+    def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, PointerType<FGenTypeN, AS>]>;
+  }
+}
+
+foreach name = ["nan"] in {
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeShortVecAndScalar]>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeUShortVecAndScalar]>;
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar]>;
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar]>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeLongVecAndScalar]>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeULongVecAndScalar]>;
+}
+
+foreach name = ["nextafter"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["pow"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["pown"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["powr"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["remainder"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach name = ["remquo"] in {
+    foreach Type = [GenTypeFloatVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeHalfVecAndScalar] in {
+      def : OCLSPVBuiltin<name, [Type, Type, Type, PointerType<GenTypeIntVecAndScalar, AS>]>;
+    }
+  }
+}
+
+foreach name = ["rint"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["rootn"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["round"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["rsqrt"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["sin"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach name = ["sincos"] in {
+    def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, PointerType<FGenTypeN, AS>]>;
+  }
+}
+
+foreach name = ["sinh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["sinpi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["sqrt"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["tan"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["tanh"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["tanpi"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["tgamma"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["trunc"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["half_cos"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_divide"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_exp"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_exp2"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_exp10"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_log"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_log2"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_log10"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_powr"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_recip"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_rsqrt"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_sin"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_sqrt"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["half_tan"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar]>;
+}
+
+foreach name = ["native_cos"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_divide"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_exp"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_exp2"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_exp10"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_log"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_log2"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_log10"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_powr"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_recip"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_rsqrt"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_sin"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_sqrt"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["native_tan"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+// 2.2. Integer instructions
+
+foreach name = ["s_abs"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["s_abs_diff"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["s_add_sat"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_add_sat"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_hadd"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_hadd"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_rhadd"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_rhadd"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_clamp"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_clamp"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["clz"] in {
+  def : OCLSPVBuiltin<name, [AIGenTypeN, AIGenTypeN]>;
+}
+
+foreach name = ["ctz"] in {
+  def : OCLSPVBuiltin<name, [AIGenTypeN, AIGenTypeN]>;
+}
+
+foreach name = ["s_mad_hi"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_mad_sat"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_mad_sat"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["s_max"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_max"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_min"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_min"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["s_mul_hi"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["rotate"] in {
+  def : OCLSPVBuiltin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN]>;
+}
+
+foreach name = ["s_sub_sat"] in {
+  def : OCLSPVBuiltin<name, [ASIGenTypeN, ASIGenTypeN, ASIGenTypeN]>;
+}
+
+foreach name = ["u_sub_sat"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["u_upsample"] in {
+  def : OCLSPVBuiltin<name, [GenTypeUShortVecAndScalar, GenTypeUCharVecAndScalar, GenTypeUCharVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeUIntVecAndScalar, GenTypeUShortVecAndScalar, GenTypeUShortVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["s_upsample"] in {
+  def : OCLSPVBuiltin<name, [GenTypeShortVecAndScalar, GenTypeCharVecAndScalar, GenTypeUCharVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeShortVecAndScalar, GenTypeUShortVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeLongVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["popcount"] in {
+  def : OCLSPVBuiltin<name, [AIGenTypeN, AIGenTypeN]>;
+}
+
+foreach name = ["s_mad24"] in {
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar]>;
+}
+
+foreach name = ["u_mad24"] in {
+  def : OCLSPVBuiltin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+}
+
+foreach name = ["s_mul24"] in {
+  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar]>;
+}
+
+foreach name = ["u_mul24"] in {
+  def : OCLSPVBuiltin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+}
+
+foreach name = ["u_abs"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["u_abs_diff"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["u_mul_hi"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+foreach name = ["u_mad_hi"] in {
+  def : OCLSPVBuiltin<name, [AUIGenTypeN, AUIGenTypeN, AUIGenTypeN, AUIGenTypeN]>;
+}
+
+// 2.3. Common instructions
+
+foreach name = ["fclamp"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["degrees"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fmax_common"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["fmin_common"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["mix"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["radians"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["step"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["smoothstep"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN, FGenTypeN, FGenTypeN]>;
+}
+
+foreach name = ["sign"] in {
+  def : OCLSPVBuiltin<name, [FGenTypeN, FGenTypeN]>;
+}
+
+// 2.4. Geometric instructions
+
+foreach name = ["cross"] in {
+  foreach VSize = [3, 4] in {
+    def : OCLSPVBuiltin<name, [VectorType<Float, VSize>, VectorType<Float, VSize>, VectorType<Float, VSize>], Attr.Const>;
+    def : OCLSPVBuiltin<name, [VectorType<Double, VSize>, VectorType<Double, VSize>, VectorType<Double, VSize>], Attr.Const>;
+    def : OCLSPVBuiltin<name, [VectorType<Half, VSize>, VectorType<Half, VSize>, VectorType<Half, VSize>], Attr.Const>;
+  }
+}
+
+foreach name = ["distance"] in {
+  def : OCLSPVBuiltin<name, [Float, GenTypeFloatVec1234, GenTypeFloatVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [Double, GenTypeDoubleVec1234, GenTypeDoubleVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [Half, GenTypeHalfVec1234, GenTypeHalfVec1234], Attr.Const>;
+}
+
+foreach name = ["length"] in {
+  def : OCLSPVBuiltin<name, [Float, GenTypeFloatVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [Double, GenTypeDoubleVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [Half, GenTypeHalfVec1234], Attr.Const>;
+}
+
+foreach name = ["normalize"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVec1234, GenTypeFloatVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVec1234, GenTypeDoubleVec1234], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVec1234, GenTypeHalfVec1234], Attr.Const>;
+}
+
+foreach name = ["fast_distance"] in {
+  def : OCLSPVBuiltin<name, [Float, GenTypeFloatVec1234, GenTypeFloatVec1234], Attr.Const>;
+}
+
+foreach name = ["fast_length"] in {
+  def : OCLSPVBuiltin<name, [Float, GenTypeFloatVec1234], Attr.Const>;
+}
+
+foreach name = ["fast_normalize"] in {
+  def : OCLSPVBuiltin<name, [GenTypeFloatVec1234, GenTypeFloatVec1234], Attr.Const>;
+}
+
+// 2.5. Relational instructions
+
+foreach name = ["bitselect"] in {
+  def : OCLSPVBuiltin<name, [AGenTypeN, AGenTypeN, AGenTypeN, AGenTypeN], Attr.Const>;
+}
+
+foreach name = ["select"] in {
+  def : OCLSPVBuiltin<name, [SGenTypeN, SGenTypeN, SGenTypeN, SGenTypeN], Attr.Const>;
+  def : OCLSPVBuiltin<name, [SGenTypeN, SGenTypeN, SGenTypeN, UGenTypeN], Attr.Const>;
+  def : OCLSPVBuiltin<name, [UGenTypeN, UGenTypeN, UGenTypeN, UGenTypeN], Attr.Const>;
+  def : OCLSPVBuiltin<name, [UGenTypeN, UGenTypeN, UGenTypeN, SGenTypeN], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeULongVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeUShortVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeLongVecAndScalar], Attr.Const>;
+  def : OCLSPVBuiltin<name, [GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar, GenTypeShortVecAndScalar], Attr.Const>;
+}
+
+// 2.6. Vector Data Load and Store instructions
+
+foreach VSize = [2, 3, 4, 8, 16] in {
+  foreach AS = [GlobalAS, LocalAS, PrivateAS, ConstantAS, GenericAS] in {
+    foreach Ty = TLAll.List in {
+      foreach name = ["vloadn"] in {
+        def : OCLSPVBuiltin<name # "_R" # Ty.Name # VSize, [VectorType<Ty, VSize>, Size, PointerType<ConstType<Ty>, AS>]>;
+      }
+    }
+    foreach name = ["vloada_halfn", "vload_halfn"] in {
+      def : OCLSPVBuiltin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+    }
+  }
+  foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+    foreach Ty = TLAll.List in {
+      foreach name = ["vstoren"] in {
+        def : OCLSPVBuiltin<name, [Void, VectorType<Ty, VSize>, Size, PointerType<ConstType<Ty>, AS>]>;
+      }
+    }
+    foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+      foreach name = ["vstore_halfn" # rnd, "vstorea_halfn" # rnd] in {
+        def : OCLSPVBuiltin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
+        def : OCLSPVBuiltin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, AS>]>;
+      }
+    }
+  }
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, ConstantAS, GenericAS] in {
+  foreach name = ["vload_half"] in {
+    def : OCLSPVBuiltin<name, [Float, Size, PointerType<ConstType<Half>, AS>]>;
+  }
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS, GenericAS] in {
+  foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+    foreach name = ["vstore_half" # rnd] in {
+      def : OCLSPVBuiltin<name, [Void, Float, Size, PointerType<Half, AS>]>;
+      def : OCLSPVBuiltin<name, [Void, Double, Size, PointerType<Half, AS>]>;
+    }
+  }
+}
+
+// 2.7. Miscellaneous Vector instructions
+
+foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+    def : OCLSPVBuiltin<"shuffle", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                              GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                              GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                  Attr.Const>;
+  }
+}
+foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
+  foreach VSize2 = [Vec2, Vec4, Vec8, Vec16] in {
+    def : OCLSPVBuiltin<"shuffle2", [GenericType<"TLAll" # VSize1.Name, TLAll, VSize1>,
+                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                               GenericType<"TLAll" # VSize2.Name, TLAll, VSize2>,
+                               GenericType<"TLAllUnsigned" # VSize1.Name, TLAllUnsigned, VSize1>],
+                  Attr.Const>;
+  }
+}
+
+// 2.8. Misc instructions
+
+let IsVariadic = 1 in {
+  foreach name = ["printf"] in {
+    def : OCLSPVBuiltin<name, [Int, PointerType<ConstType<TrueChar>, ConstantAS>]>;
+  }
+}
+
+foreach name = ["prefetch"] in {
+  def : OCLSPVBuiltin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;
+}
+
+
+// Core builtins
+
+// 3.32.8. Memory Instructions
+
+// foreach name = ["ImageTexelPointer"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+foreach name = ["GenericPtrMemSemantics"] in {
+  def : SPVBuiltin<name, [Int, PointerType<ConstType<Int>, GenericAS>]>;
+}
+
+// 3.32.10. Image Instructions
+
+// foreach name = ["SampledImage"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+// foreach name = ["ImageSampleExplicitLod"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+// foreach name = ["ImageFetch"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+// foreach name = ["ImageRead"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+// foreach name = ["ImageWrite"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+// foreach name = ["Image"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+// foreach name = ["ImageQueryFormat"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+// foreach name = ["ImageQueryOrder"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+// foreach name = ["ImageQuerySizeLod"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+// foreach name = ["ImageQuerySize"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+// foreach name = ["ImageQueryLevels"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+// foreach name = ["ImageQuerySamples"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// 3.32.11. Conversion Instructions
+
+foreach IType = [UChar, UShort, UInt, ULong] in {
+  foreach FType = [Float, Double, Half] in {
+    def : SPVBuiltin<"ConvertFToU_R" # IType.Name, [IType, FType], Attr.Const>;
+    def : SPVBuiltin<"ConvertUToF_R" # FType.Name, [FType, IType], Attr.Const>;
+    foreach v = [2, 3, 4, 8, 16] in {
+      def : SPVBuiltin<"ConvertFToU_R" # IType.Name # v,
+                       [VectorType<IType, v>, VectorType<FType, v>],
+                       Attr.Const>;
+      def : SPVBuiltin<"ConvertUToF_R" # FType.Name # v,
+                       [VectorType<FType, v>, VectorType<IType, v>],
+                       Attr.Const>;
+    }
+  }
+}
+
+foreach IType = [Char, Short, Int, Long] in {
+  foreach FType = [Float, Double, Half] in {
+    def : SPVBuiltin<"ConvertFToS_R" # IType.Name, [IType, FType], Attr.Const>;
+    def : SPVBuiltin<"ConvertSToF_R" # FType.Name, [FType, IType], Attr.Const>;
+    foreach v = [2, 3, 4, 8, 16] in {
+      def : SPVBuiltin<"ConvertFToS_R" # IType.Name # v,
+                       [VectorType<IType, v>, VectorType<FType, v>],
+                       Attr.Const>;
+      def : SPVBuiltin<"ConvertSToF_R" # FType.Name # v,
+                       [VectorType<FType, v>, VectorType<IType, v>],
+                       Attr.Const>;
+    }
+  }
+}
+
+foreach InType = TLAll.List in {
+  foreach OutType = TLUnsignedInts.List in {
+    if !ne(OutType.ElementSize, InType.ElementSize) then {
+      def : SPVBuiltin<"UConvert_R" # OutType.Name, [OutType, InType], Attr.Const>;
+      foreach v = [2, 3, 4, 8, 16] in {
+        def : SPVBuiltin<"UConvert_R" # OutType.Name # v,
+                         [VectorType<OutType, v>, VectorType<InType, v>],
+                         Attr.Const>;
+      }
+    }
+  }
+  foreach OutType = TLSignedInts.List in {
+    if !ne(OutType.ElementSize, InType.ElementSize) then {
+      def : SPVBuiltin<"SConvert_R" # OutType.Name, [OutType, InType], Attr.Const>;
+      foreach v = [2, 3, 4, 8, 16] in {
+        def : SPVBuiltin<"SConvert_R" # OutType.Name # v,
+                         [VectorType<OutType, v>, VectorType<InType, v>],
+                         Attr.Const>;
+      }
+    }
+  }
+}
+
+foreach InType = TLFloat.List in {
+  foreach OutType = TLFloat.List in {
+    if !ne(OutType.ElementSize, InType.ElementSize) then {
+      def : SPVBuiltin<"FConvert_R" # OutType.Name, [OutType, InType], Attr.Const>;
+      foreach v = [2, 3, 4, 8, 16] in {
+        def : SPVBuiltin<"FConvert_R" # OutType.Name # v,
+                         [VectorType<OutType, v>, VectorType<InType, v>],
+                         Attr.Const>;
+      }
+    }
+  }
+}
+
+foreach InType = TLSignedInts.List in {
+  foreach OutType = TLUnsignedInts.List in {
+    def : SPVBuiltin<"SatConvertSToU_R" # OutType.Name, [OutType, InType], Attr.Const>;
+    foreach v = [2, 3, 4, 8, 16] in {
+      def : SPVBuiltin<"SatConvertSToU_R" # OutType.Name # v,
+                       [VectorType<OutType, v>, VectorType<InType, v>],
+                       Attr.Const>;
+    }
+  }
+}
+
+foreach InType = TLUnsignedInts.List in {
+  foreach OutType = TLSignedInts.List in {
+    def : SPVBuiltin<"SatConvertUToS_R" # OutType.Name, [OutType, InType], Attr.Const>;
+    foreach v = [2, 3, 4, 8, 16] in {
+      def : SPVBuiltin<"SatConvertUToS_R" # OutType.Name # v,
+                       [VectorType<OutType, v>, VectorType<InType, v>],
+                       Attr.Const>;
+    }
+  }
+}
+
+foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
+  def : SPVBuiltin<"GenericCastToPtrExplicit", [PointerType<Char, AS>, PointerType<Char, GenericAS>]>;
+}
+
+foreach Type = TLFloat.List in {
+  foreach v = [2, 3, 4, 8, 16] in {
+    def : SPVBuiltin<"VectorTimesScalar", [VectorType<Type, v>, VectorType<Type, v>, Type]>;
+  }
+}
+
+foreach name = ["Dot"] in {
+  def : SPVBuiltin<name, [Float, GenTypeFloatVecNoScalar, GenTypeFloatVecNoScalar], Attr.Const>;
+  def : SPVBuiltin<name, [Double, GenTypeDoubleVecNoScalar, GenTypeDoubleVecNoScalar], Attr.Const>;
+  def : SPVBuiltin<name, [Half, GenTypeHalfVecNoScalar, GenTypeHalfVecNoScalar], Attr.Const>;
+}
+
+// foreach name = ["IAddCarry"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ISubBorrow"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UMulExtended"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SMulExtended"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+foreach name = ["Any", "All"] in {
+  def : SPVBuiltin<name, [Bool, GenTypeBoolVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["IsNan", "IsInf", "IsFinite", "IsNormal", "SignBitSet"] in {
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeFloatVecAndScalar], Attr.Const>;
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeDoubleVecAndScalar], Attr.Const>;
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeHalfVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["LessOrGreater", "Ordered", "Unordered", "FOrdEqual", "FUnordEqual", "FOrdNotEqual", "FUnordNotEqual", "FOrdLessThan", "FUnordLessThan", "FOrdGreaterThan", "FUnordGreaterThan", "FOrdLessThanEqual", "FUnordLessThanEqual", "FOrdGreaterThanEqual", "FUnordGreaterThanEqual"] in {
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar], Attr.Const>;
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeDoubleVecAndScalar, GenTypeDoubleVecAndScalar], Attr.Const>;
+  def : SPVBuiltin<name, [GenTypeBoolVecAndScalar, GenTypeHalfVecAndScalar, GenTypeHalfVecAndScalar], Attr.Const>;
+}
+
+foreach name = ["BitCount"] in {
+  def : SPVBuiltin<name, [AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+
+// 3.32.20. Barrier Instructions
+
+foreach name = ["ControlBarrier"] in {
+  // FIXME: Add enum flags instead of UInt
+  def : SPVBuiltin<name, [Void, UInt, UInt, UInt]>;
+}
+
+foreach name = ["MemoryBarrier"] in {
+  // FIXME: Add enum flags instead of UInt
+  def : SPVBuiltin<name, [Void, UInt, UInt]>;
+}
+
+// 3.32.18. Atomic Instructions
+
+// OpenCL validation rules:
+// The Pointer operand must be a pointer to
+// the Function, Workgroup, or CrossWorkGroup Storage Classes.
+// Note that an Atomic Instruction on a pointer to the Function Storage Class is valid,
+// but does not have defined behavior.
+foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
+  foreach Type = [Int, UInt, Long, ULong] in {
+    foreach name = ["AtomicLoad", "AtomicIIncrement", "AtomicIDecrement"] in {
+      def : SPVBuiltin<name, [Type, PointerType<ConstType<VolatileType<Type>>, AS>, UInt, UInt]>;
+      def : SPVBuiltin<name, [Type, PointerType<ConstType<Type>, AS>, UInt, UInt]>;
+    }
+
+    foreach name = ["AtomicStore"] in {
+      def : SPVBuiltin<name, [Void, PointerType<VolatileType<Type>, AS>, UInt, UInt, Type]>;
+      def : SPVBuiltin<name, [Void, PointerType<Type, AS>, UInt, UInt, Type]>;
+    }
+
+    foreach name = ["AtomicExchange", "AtomicIAdd", "AtomicISub",
+                    "AtomicAnd", "AtomicOr", "AtomicXor"] in {
+      def : SPVBuiltin<name, [Type, PointerType<VolatileType<Type>, AS>, UInt, UInt, Type]>;
+      def : SPVBuiltin<name, [Type, PointerType<Type, AS>, UInt, UInt, Type]>;
+    }
+
+    foreach name = ["AtomicCompareExchange"] in {
+      def : SPVBuiltin<name, [Type, PointerType<VolatileType<Type>, AS>, UInt, UInt, UInt, Type, Type]>;
+      def : SPVBuiltin<name, [Type, PointerType<Type, AS>, UInt, UInt, UInt, Type, Type]>;
+    }
+  }
+
+  foreach Type = [Int, Long] in {
+    foreach name = ["AtomicSMin", "AtomicSMax"] in {
+      def : SPVBuiltin<name, [Type, PointerType<VolatileType<Type>, AS>, UInt, UInt, Type]>;
+      def : SPVBuiltin<name, [Type, PointerType<Type, AS>, UInt, UInt, Type]>;
+    }
+  }
+
+  foreach Type = [UInt, ULong] in {
+    foreach name = ["AtomicUMin", "AtomicUMax"] in {
+      def : SPVBuiltin<name, [Type, PointerType<VolatileType<Type>, AS>, UInt, UInt, Type]>;
+      def : SPVBuiltin<name, [Type, PointerType<Type, AS>, UInt, UInt, Type]>;
+    }
+  }
+
+  foreach Type = [Int, UInt] in {
+    foreach name = ["AtomicFlagTestAndSet"] in {
+      def : SPVBuiltin<name, [Type, PointerType<ConstType<VolatileType<Type>>, AS>, UInt, UInt]>;
+      def : SPVBuiltin<name, [Type, PointerType<ConstType<Type>, AS>, UInt, UInt]>;
+    }
+
+    foreach name = ["AtomicFlagClear"] in {
+      def : SPVBuiltin<name, [Void, PointerType<ConstType<VolatileType<Type>>, AS>, UInt, UInt]>;
+      def : SPVBuiltin<name, [Void, PointerType<ConstType<Type>, AS>, UInt, UInt]>;
+    }
+  }
+}
+
+// 3.32.21. Group and Subgroup Instructions
+
 foreach name = ["GroupAsyncCopy"] in {
-// FIXME: Add enum flags instead of UInt
+  // FIXME: Add enum flags instead of UInt
   def : SPVBuiltin<name, [Event, UInt, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Size, Event], Attr.Convergent>;
   def : SPVBuiltin<name, [Event, UInt, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Size, Event], Attr.Convergent>;
+}
+
+foreach name = ["GroupWaitEvents"] in {
+  def : SPVBuiltin<name, [Void, UInt, Int, PointerType<Event, PrivateAS>], Attr.Convergent>;
+  def : SPVBuiltin<name, [Void, UInt, Int, PointerType<Event, GenericAS>], Attr.Convergent>;
+}
+
+foreach name = ["GroupAll", "GroupAny"] in {
+  def : SPVBuiltin<name, [Char, UInt, Char], Attr.Convergent>;
+}
+
+foreach name = ["GroupBroadcast"] in {
+  foreach IDType = TLAllInts.List in {
+    def : SPVBuiltin<name, [AGenType1, UInt, AGenType1, IDType], Attr.Convergent>;
+    def : SPVBuiltin<name, [AGenType1, UInt, AGenType1, VectorType<IDType, 2>], Attr.Convergent>;
+    def : SPVBuiltin<name, [AGenType1, UInt, AGenType1, VectorType<IDType, 3>], Attr.Convergent>;
+    def : SPVBuiltin<name, [Bool, UInt, Bool, IDType], Attr.Convergent>;
+    def : SPVBuiltin<name, [Bool, UInt, Bool, VectorType<IDType, 2>], Attr.Convergent>;
+    def : SPVBuiltin<name, [Bool, UInt, Bool, VectorType<IDType, 3>], Attr.Convergent>;
+  }
+}
+
+foreach name = ["GroupIAdd"] in {
+  def : SPVBuiltin<name, [AIGenTypeN, UInt, UInt, AIGenTypeN], Attr.Convergent>;
+}
+
+foreach name = ["GroupFAdd", "GroupFMin", "GroupFMax"] in {
+  def : SPVBuiltin<name, [FGenTypeN, UInt, UInt, FGenTypeN], Attr.Convergent>;
+}
+
+foreach name = ["GroupUMin", "GroupUMax"] in {
+  def : SPVBuiltin<name, [AUIGenTypeN, UInt, UInt, AUIGenTypeN], Attr.Convergent>;
+}
+
+foreach name = ["GroupSMin", "GroupSMax"] in {
+  def : SPVBuiltin<name, [ASIGenTypeN, UInt, UInt, ASIGenTypeN], Attr.Convergent>;
+}
+
+// 3.32.23. Pipe Instructions
+
+// foreach name = ["ReadPipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["WritePipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ReservedReadPipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ReservedWritePipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ReserveReadPipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ReserveWritePipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CommitReadPipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CommitWritePipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IsValidReserveId"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["GetNumPipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetMaxPipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupReserveReadPipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupReserveWritePipePackets"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupCommitReadPipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupCommitWritePipe"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// 3.32.22. Device-Side Enqueue Instructions
+
+// foreach name = ["EnqueueMarker"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["EnqueueKernel"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelNDrangeSubGroupCount"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelNDrangeMaxSubGroupSize"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelWorkGroupSize"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelPreferredWorkGroupSizeMultiple"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["RetainEvent"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["ReleaseEvent"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["CreateUserEvent"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["IsValidEvent"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SetUserEventStatus"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["CaptureEventProfilingInfo"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["GetDefaultQueue"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["BuildNDRange"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+
+// foreach name = ["ConstantPipeStorage"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CreatePipeFromPipeStorage"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelLocalSizeForSubgroupCount"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GetKernelMaxNumSubgroups"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["NamedBarrierInitialize"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["MemoryNamedBarrier"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupBallotKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupFirstInvocationKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAllKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAnyKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAllEqualKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupReadInvocationKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupIAddNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupFAddNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupFMinNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupUMinNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupSMinNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupFMaxNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupUMaxNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupSMaxNonUniformAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["FragmentMaskFetchAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["FragmentFetchAMD"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ReadClockKHR"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["ImageSampleFootprintNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["GroupNonUniformPartitionNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["WritePackedPrimitiveIndices4x8NV"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["ReportIntersectionNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IgnoreIntersectionNV"] in {
+//   def : SPVBuiltin<name, []>;
+// }
+
+// foreach name = ["TerminateRayNV"] in {
+//   def : SPVBuiltin<name, []>;
+// }
+
+// foreach name = ["TraceNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["TypeAccelerationStructureNV"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["ExecuteCallableNV"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["TypeCooperativeMatrixNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CooperativeMatrixLoadNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CooperativeMatrixStoreNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CooperativeMatrixMulAddNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["CooperativeMatrixLengthNV"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["BeginInvocationInterlockEXT"] in {
+//   def : SPVBuiltin<name, []>;
+// }
+
+// foreach name = ["EndInvocationInterlockEXT"] in {
+//   def : SPVBuiltin<name, []>;
+// }
+
+// foreach name = ["DemoteToHelperInvocationEXT"] in {
+//   def : SPVBuiltin<name, []>;
+// }
+
+// foreach name = ["IsHelperInvocationEXT"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupShuffleINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupShuffleDownINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupShuffleUpINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupShuffleXorINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupBlockReadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupBlockWriteINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupImageBlockReadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupImageBlockWriteINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupImageMediaBlockReadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupImageMediaBlockWriteINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UCountLeadingZerosINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["UCountTrailingZerosINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["AbsISubINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["AbsUSubINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IAddSatINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UAddSatINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IAverageINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UAverageINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IAverageRoundedINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UAverageRoundedINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["ISubSatINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["USubSatINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["IMul32x16INTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["UMul32x16INTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["VmeImageINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["TypeVmeImageINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["TypeAvcImePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcRefPayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcSicPayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcMcePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcMceResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcImeResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcImeResultSingleReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcImeResultDualReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcImeSingleReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcImeDualReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcRefResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["TypeAvcSicResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultInterBaseMultiReferencePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetInterBaseMultiReferencePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultInterShapePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetInterShapePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultInterDirectionPenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetInterDirectionPenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultIntraLumaShapePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultInterMotionVectorCostTableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultHighPenaltyCostTableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultMediumPenaltyCostTableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultLowPenaltyCostTableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetMotionVectorCostFunctionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultIntraLumaModePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultNonDcLumaIntraPenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetDefaultIntraChromaModeBasePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetAcOnlyHaarINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetSourceInterlacedFieldPolarityINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetSingleReferenceInterlacedFieldPolarityINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceSetDualReferenceInterlacedFieldPolaritiesINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToImePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToImeResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToRefPayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToRefResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToSicPayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceConvertToSicResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetMotionVectorsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterDistortionsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetBestInterDistortionsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterMajorShapeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterMinorShapeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterDirectionsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterMotionVectorCountINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterReferenceIdsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcMceGetInterReferenceInterlacedFieldPolaritiesINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeInitializeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetSingleReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetDualReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeRefWindowSizeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeAdjustRefOffsetINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeConvertToMcePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetMaxMotionVectorCountINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetUnidirectionalMixDisableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetEarlySearchTerminationThresholdINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeSetWeightedSadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithSingleReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithDualReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithSingleReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithDualReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithSingleReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithDualReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithSingleReferenceStreaminoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeEvaluateWithDualReferenceStreaminoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeConvertToMceResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetSingleReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetDualReferenceStreaminINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeStripSingleReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeStripDualReferenceStreamoutINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetBorderReachedINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetTruncatedSearchIndicationINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetUnidirectionalEarlySearchTerminationINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetWeightingPatternMinimumMotionVectorINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcImeGetWeightingPatternMinimumDistortionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcFmeInitializeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcBmeInitializeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefConvertToMcePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefSetBidirectionalMixDisableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefSetBilinearFilterEnableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefEvaluateWithSingleReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefEvaluateWithDualReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefEvaluateWithMultiReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcRefConvertToMceResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicInitializeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicConfigureSkcINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicConfigureIpeLumaINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicConfigureIpeLumaChromaINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetMotionVectorMaskINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicConvertToMcePayloadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetIntraLumaShapePenaltyINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetIntraLumaModeCostFunctionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetIntraChromaModeCostFunctionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetBilinearFilterEnableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetSkcForwardTransformEnableINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicSetBlockBasedRawSkipSadINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicEvaluateIpeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicEvaluateWithSingleReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicEvaluateWithDualReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicEvaluateWithMultiReferenceINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY, TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicConvertToMceResultINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetIpeLumaShapeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetBestIpeLumaDistortionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetBestIpeChromaDistortionINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetPackedIpeLumaModesINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetIpeChromaModeINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetPackedSkcLumaCountThresholdINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetPackedSkcLumaSumThresholdINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// foreach name = ["SubgroupAvcSicGetInterRawSadsINTEL"] in {
+//   def : SPVBuiltin<name, [TY, TY, TY]>;
+// }
+
+// FIXME
+def : Builtin<"get_work_dim", [UInt], Attr.Const>;
+foreach name = ["get_global_size", "get_global_id", "get_local_size",
+                "get_local_id", "get_num_groups", "get_group_id",
+                "get_global_offset"] in {
+  def : Builtin<name, [Size, UInt], Attr.Const>;
+}
+
+let MinVersion = CL20 in {
+  def : Builtin<"get_enqueued_local_size", [Size, UInt]>;
+  foreach name = ["get_global_linear_id", "get_local_linear_id"] in {
+    def : Builtin<name, [Size]>;
+  }
 }
