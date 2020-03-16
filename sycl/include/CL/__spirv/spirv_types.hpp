@@ -19,40 +19,56 @@
 // - spv namespace renamed to __spv
 namespace __spv {
 
-enum class Scope : uint32_t {
-  CrossDevice = 0,
-  Device = 1,
-  Workgroup = 2,
-  Subgroup = 3,
-  Invocation = 4,
+struct Scope {
+
+  enum Flag : uint32_t {
+    CrossDevice = 0,
+    Device = 1,
+    Workgroup = 2,
+    Subgroup = 3,
+    Invocation = 4,
+  };
+
+  constexpr Scope(Flag flag) : flag_value(flag) {}
+
+  constexpr operator uint32_t() const { return flag_value; }
+
+  Flag flag_value;
 };
 
+struct MemorySemanticsMask {
 
-enum class MemorySemanticsMask : uint32_t {
-  None = 0x0,
-  Acquire = 0x2,
-  Release = 0x4,
-  AcquireRelease = 0x8,
-  SequentiallyConsistent = 0x10,
-  UniformMemory = 0x40,
-  SubgroupMemory = 0x80,
-  WorkgroupMemory = 0x100,
-  CrossWorkgroupMemory = 0x200,
-  AtomicCounterMemory = 0x400,
-  ImageMemory = 0x800,
+  enum Flag : uint32_t {
+    None = 0x0,
+    Acquire = 0x2,
+    Release = 0x4,
+    AcquireRelease = 0x8,
+    SequentiallyConsistent = 0x10,
+    UniformMemory = 0x40,
+    SubgroupMemory = 0x80,
+    WorkgroupMemory = 0x100,
+    CrossWorkgroupMemory = 0x200,
+    AtomicCounterMemory = 0x400,
+    ImageMemory = 0x800,
+  };
+
+  constexpr MemorySemanticsMask(Flag flag) : flag_value(flag) {}
+
+  constexpr operator uint32_t() const { return flag_value; }
+
+  Flag flag_value;
 };
 
-enum class GroupOperation : uint32_t {
-  Reduce = 0,
-  InclusiveScan = 1,
-  ExclusiveScan = 2
-};
+struct GroupOperation {
 
-inline constexpr MemorySemanticsMask operator|(MemorySemanticsMask a,
-                                               MemorySemanticsMask b) {
-  return static_cast<MemorySemanticsMask>(static_cast<uint32_t>(a) |
-                                          static_cast<uint32_t>(b));
-}
+  enum Flag : uint32_t { Reduce = 0, InclusiveScan = 1, ExclusiveScan = 2 };
+
+  constexpr GroupOperation(Flag flag) : flag_value(flag) {}
+
+  constexpr operator uint32_t() const { return flag_value; }
+
+  Flag flag_value;
+};
 
 } // namespace __spv
 
@@ -80,8 +96,8 @@ struct ConstantPipeStorage {
 // SPIRV built-in functions.
 // Only in such cases the class is recognized as SPIRV type __ocl_event_t.
 #ifndef __SYCL_DEVICE_ONLY__
-typedef void* __ocl_event_t;
-typedef void* __ocl_sampler_t;
+typedef void *__ocl_event_t;
+typedef void *__ocl_sampler_t;
 // Adding only the datatypes that can be currently used in SYCL,
 // as per SYCL spec 1.2.1
 typedef void *__ocl_image1d_ro_t;

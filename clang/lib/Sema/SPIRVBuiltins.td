@@ -1,4 +1,4 @@
-//==--- OpenCLBuiltins.td - OpenCL builtin declarations -------------------===//
+//==--- SPIRVBuiltins.td - SPIRV builtin declarations -------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -1153,11 +1153,11 @@ foreach VSize1 = [Vec2, Vec4, Vec8, Vec16] in {
 
 // 2.8. Misc instructions
 
-let IsVariadic = 1 in {
-  foreach name = ["printf"] in {
-    def : OCLSPVBuiltin<name, [Int, PointerType<ConstType<TrueChar>, ConstantAS>]>;
-  }
-}
+// let IsVariadic = 1 in {
+//   foreach name = ["printf"] in {
+//     def : OCLSPVBuiltin<name, [Int, PointerType<ConstType<TrueChar>, ConstantAS>]>;
+//   }
+// }
 
 foreach name = ["prefetch"] in {
   def : OCLSPVBuiltin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;

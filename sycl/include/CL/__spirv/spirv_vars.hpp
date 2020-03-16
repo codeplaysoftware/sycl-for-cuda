@@ -58,12 +58,12 @@ DEFINE_FUNC_ID_TO_XYZ_CONVERTER(LocalInvocationId);
 
 #undef DEFINE_FUNC_ID_TO_XYZ_CONVERTER
 
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupSize;
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupMaxSize;
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInNumSubgroups;
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInNumEnqueuedSubgroups;
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupId;
-extern "C" const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupLocalInvocationId;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupSize;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupMaxSize;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInNumSubgroups;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInNumEnqueuedSubgroups;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupId;
+extern const __attribute__((opencl_constant)) uint32_t __spirv_BuiltInSubgroupLocalInvocationId;
 
 #define DEFINE_INIT_SIZES(POSTFIX)                                             \
                                                                                \
