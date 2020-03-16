@@ -722,9 +722,10 @@ static void GetQualTypesForOpenCLBuiltin(
 static void GetOpenCLBuiltinFctOverloads(
     ASTContext &Context, unsigned GenTypeMaxCnt,
     std::vector<QualType> &FunctionList, SmallVector<QualType, 1> &RetTypes,
-    SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
+    SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes,
+    bool IsVariadic) {
   FunctionProtoType::ExtProtoInfo PI;
-  PI.Variadic = false;
+  PI.Variadic = IsVariadic;
 
   // Create FunctionTypes for each (gen)type.
   for (unsigned IGenType = 0; IGenType < GenTypeMaxCnt; IGenType++) {
@@ -807,7 +808,7 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, unsigned BuiltinSetVe
     // Create function overload for each type combination.
     std::vector<QualType> FunctionList;
     GetOpenCLBuiltinFctOverloads(Context, GenTypeMaxCnt, FunctionList, RetTypes,
-                                 ArgTypes);
+                                 ArgTypes, OpenCLBuiltin.IsVariadic);
 
     SourceLocation Loc = LR.getNameLoc();
     DeclContext *Parent = Context.getTranslationUnitDecl();
