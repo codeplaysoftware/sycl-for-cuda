@@ -750,11 +750,11 @@ static void GetOpenCLBuiltinFctOverloads(
 /// \param S (in/out) The Sema instance.
 /// \param BIDecl (in) Description of the builtin.
 /// \param FDecl (in/out) FunctionDecl instance.
-template<typename ProgModel>
-static void AddOpenCLExtensions(Sema &S, const typename ProgModel::BuiltinStruct &BIDecl,
+static void AddOpenCLExtensions(Sema &S,
+                                const OpenCLBuiltin::BuiltinStruct &BIDecl,
                                 FunctionDecl *FDecl) {
   // Fetch extension associated with a function prototype.
-  StringRef E = ProgModel::FunctionExtensionTable[BIDecl.Extension];
+  StringRef E = OpenCLBuiltin::FunctionExtensionTable[BIDecl.Extension];
   if (E != "")
     S.setOpenCLExtensionForDecl(FDecl, E);
 }
@@ -768,12 +768,13 @@ static void AddOpenCLExtensions(Sema &S, const typename ProgModel::BuiltinStruct
 /// \param II (in) The identifier being resolved.
 /// \param FctIndex (in) Starting index in the BuiltinTable.
 /// \param Len (in) The signature list has Len elements.
-template<typename ProgModel>
-static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, unsigned BuiltinSetVersion,
-                                                  LookupResult &LR,
-                                                  IdentifierInfo *II,
-                                                  const unsigned FctIndex,
-                                                  const unsigned Len) {
+template <typename ProgModel>
+static void InsertOCLBuiltinDeclarationsFromTable(
+    Sema &S, unsigned BuiltinSetVersion, LookupResult &LR, IdentifierInfo *II,
+    const unsigned FctIndex, const unsigned Len,
+    std::function<void(const typename ProgModel::BuiltinStruct &,
+                       FunctionDecl &)>
+        ProgModelFinalizer) {
   // The builtin function declaration uses generic types (gentype).
   bool HasGenType = false;
 
@@ -848,8 +849,7 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, unsigned BuiltinSetVe
       if (!S.getLangOpts().OpenCLCPlusPlus)
         NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
 
-      AddOpenCLExtensions<ProgModel>(S, OpenCLBuiltin, NewOpenCLBuiltin);
-
+      ProgModelFinalizer(OpenCLBuiltin, *NewOpenCLBuiltin);
       LR.addDecl(NewOpenCLBuiltin);
     }
   }
@@ -889,7 +889,11 @@ bool Sema::LookupBuiltin(LookupResult &R) {
           if (Context.getLangOpts().OpenCLCPlusPlus)
             OpenCLVersion = 200;
           InsertOCLBuiltinDeclarationsFromTable<OpenCLBuiltin>(
-            *this, OpenCLVersion, R, II, Index.first - 1, Index.second);
+              *this, OpenCLVersion, R, II, Index.first - 1, Index.second,
+              [this](const OpenCLBuiltin::BuiltinStruct &OpenCLBuiltin,
+                     FunctionDecl &NewOpenCLBuiltin) {
+                AddOpenCLExtensions(*this, OpenCLBuiltin, &NewOpenCLBuiltin);
+              });
           return true;
         }
       }
@@ -899,7 +903,12 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         auto Index = SPIRVBuiltin::isBuiltin(II->getName());
         if (Index.first) {
           InsertOCLBuiltinDeclarationsFromTable<SPIRVBuiltin>(
-            *this, 0, R, II, Index.first - 1, Index.second);
+              *this, 0, R, II, Index.first - 1, Index.second,
+              [this](const SPIRVBuiltin::BuiltinStruct &,
+                     FunctionDecl &NewBuiltin) {
+                NewBuiltin.addAttr(
+                    SYCLDeviceAttr::CreateImplicit(this->Context));
+              });
           return true;
         }
       }
