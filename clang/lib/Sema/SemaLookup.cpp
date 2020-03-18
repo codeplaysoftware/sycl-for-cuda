@@ -678,10 +678,10 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
     D->dump();
 }
 
-/// Get the QualType instances of the return type and arguments for an OpenCL
+/// Get the QualType instances of the return type and arguments for a ProgModel
 /// builtin function signature.
 /// \param Context (in) The Context instance.
-/// \param OpenCLBuiltin (in) The signature currently handled.
+/// \param Builtin (in) The signature currently handled.
 /// \param GenTypeMaxCnt (out) Maximum number of types contained in a generic
 ///        type used as return type or as argument.
 ///        Only meaningful for generic types, otherwise equals 1.
@@ -690,7 +690,7 @@ LLVM_DUMP_METHOD void LookupResult::dump() {
 ///        argument, ArgTypes contains QualTypes for the Cartesian product
 ///        of (vector sizes) x (types) .
 template<typename ProgModel>
-static void GetQualTypesForOpenCLBuiltin(
+static void GetQualTypesForProgModelBuiltin(
   ASTContext &Context, const typename ProgModel::BuiltinStruct &Builtin,
     unsigned &GenTypeMaxCnt, SmallVector<QualType, 1> &RetTypes,
     SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes) {
@@ -710,7 +710,7 @@ static void GetQualTypesForOpenCLBuiltin(
   }
 }
 
-/// Create a list of the candidate function overloads for an OpenCL builtin
+/// Create a list of the candidate function overloads for a ProgModel builtin
 /// function.
 /// \param Context (in) The ASTContext instance.
 /// \param GenTypeMaxCnt (in) Maximum number of types contained in a generic
@@ -719,7 +719,7 @@ static void GetQualTypesForOpenCLBuiltin(
 /// \param FunctionList (out) List of FunctionTypes.
 /// \param RetTypes (in) List of the possible return types.
 /// \param ArgTypes (in) List of the possible types for the arguments.
-static void GetOpenCLBuiltinFctOverloads(
+static void GetProgModelBuiltinFctOverloads(
     ASTContext &Context, unsigned GenTypeMaxCnt,
     std::vector<QualType> &FunctionList, SmallVector<QualType, 1> &RetTypes,
     SmallVector<SmallVector<QualType, 1>, 5> &ArgTypes,
@@ -759,8 +759,8 @@ static void AddOpenCLExtensions(Sema &S,
     S.setOpenCLExtensionForDecl(FDecl, E);
 }
 
-/// When trying to resolve a function name, if isOpenCLBuiltin() returns a
-/// non-null <Index, Len> pair, then the name is referencing an OpenCL
+/// When trying to resolve a function name, if ProgModel::isBuiltin() returns a
+/// non-null <Index, Len> pair, then the name is referencing a
 /// builtin function.  Add all candidate signatures to the LookUpResult.
 ///
 /// \param S (in) The Sema instance.
@@ -769,7 +769,7 @@ static void AddOpenCLExtensions(Sema &S,
 /// \param FctIndex (in) Starting index in the BuiltinTable.
 /// \param Len (in) The signature list has Len elements.
 template <typename ProgModel>
-static void InsertOCLBuiltinDeclarationsFromTable(
+static void InsertBuiltinDeclarationsFromTable(
     Sema &S, unsigned BuiltinSetVersion, LookupResult &LR, IdentifierInfo *II,
     const unsigned FctIndex, const unsigned Len,
     std::function<void(const typename ProgModel::BuiltinStruct &,
@@ -783,16 +783,16 @@ static void InsertOCLBuiltinDeclarationsFromTable(
   unsigned GenTypeMaxCnt;
 
   for (unsigned SignatureIndex = 0; SignatureIndex < Len; SignatureIndex++) {
-    const typename ProgModel::BuiltinStruct &OpenCLBuiltin =
+    const typename ProgModel::BuiltinStruct &Builtin =
         ProgModel::BuiltinTable[FctIndex + SignatureIndex];
     ASTContext &Context = S.Context;
 
     // Ignore this BIF if its version does not match the language options.
     if (BuiltinSetVersion) {
-      if (BuiltinSetVersion < OpenCLBuiltin.MinVersion)
+      if (BuiltinSetVersion < Builtin.MinVersion)
         continue;
-      if ((OpenCLBuiltin.MaxVersion != 0) &&
-          (BuiltinSetVersion >= OpenCLBuiltin.MaxVersion))
+      if ((Builtin.MaxVersion != 0) &&
+          (BuiltinSetVersion >= Builtin.MaxVersion))
         continue;
     }
 
@@ -800,27 +800,27 @@ static void InsertOCLBuiltinDeclarationsFromTable(
     SmallVector<SmallVector<QualType, 1>, 5> ArgTypes;
 
     // Obtain QualType lists for the function signature.
-    GetQualTypesForOpenCLBuiltin<ProgModel>(Context, OpenCLBuiltin, GenTypeMaxCnt,
-                                 RetTypes, ArgTypes);
+    GetQualTypesForProgModelBuiltin<ProgModel>(Context, Builtin, GenTypeMaxCnt,
+                                               RetTypes, ArgTypes);
     if (GenTypeMaxCnt > 1) {
       HasGenType = true;
     }
 
     // Create function overload for each type combination.
     std::vector<QualType> FunctionList;
-    GetOpenCLBuiltinFctOverloads(Context, GenTypeMaxCnt, FunctionList, RetTypes,
-                                 ArgTypes, OpenCLBuiltin.IsVariadic);
+    GetProgModelBuiltinFctOverloads(Context, GenTypeMaxCnt, FunctionList,
+                                    RetTypes, ArgTypes, Builtin.IsVariadic);
 
     SourceLocation Loc = LR.getNameLoc();
     DeclContext *Parent = Context.getTranslationUnitDecl();
-    FunctionDecl *NewOpenCLBuiltin;
+    FunctionDecl *NewBuiltin;
 
     for (unsigned Index = 0; Index < GenTypeMaxCnt; Index++) {
-      NewOpenCLBuiltin = FunctionDecl::Create(
+      NewBuiltin = FunctionDecl::Create(
           Context, Parent, Loc, Loc, II, FunctionList[Index],
           /*TInfo=*/nullptr, SC_Extern, false,
           FunctionList[Index]->isFunctionProtoType());
-      NewOpenCLBuiltin->setImplicit();
+      NewBuiltin->setImplicit();
 
       // Create Decl objects for each parameter, adding them to the
       // FunctionDecl.
@@ -829,28 +829,25 @@ static void InsertOCLBuiltinDeclarationsFromTable(
         SmallVector<ParmVarDecl *, 16> ParmList;
         for (unsigned IParm = 0, e = FP->getNumParams(); IParm != e; ++IParm) {
           ParmVarDecl *Parm = ParmVarDecl::Create(
-              Context, NewOpenCLBuiltin, SourceLocation(), SourceLocation(),
+              Context, NewBuiltin, SourceLocation(), SourceLocation(),
               nullptr, FP->getParamType(IParm),
               /*TInfo=*/nullptr, SC_None, nullptr);
           Parm->setScopeInfo(0, IParm);
           ParmList.push_back(Parm);
         }
-        NewOpenCLBuiltin->setParams(ParmList);
+        NewBuiltin->setParams(ParmList);
       }
 
       // Add function attributes.
-      if (OpenCLBuiltin.IsPure)
-        NewOpenCLBuiltin->addAttr(PureAttr::CreateImplicit(Context));
-      if (OpenCLBuiltin.IsConst)
-        NewOpenCLBuiltin->addAttr(ConstAttr::CreateImplicit(Context));
-      if (OpenCLBuiltin.IsConv)
-        NewOpenCLBuiltin->addAttr(ConvergentAttr::CreateImplicit(Context));
+      if (Builtin.IsPure)
+        NewBuiltin->addAttr(PureAttr::CreateImplicit(Context));
+      if (Builtin.IsConst)
+        NewBuiltin->addAttr(ConstAttr::CreateImplicit(Context));
+      if (Builtin.IsConv)
+        NewBuiltin->addAttr(ConvergentAttr::CreateImplicit(Context));
 
-      if (!S.getLangOpts().OpenCLCPlusPlus)
-        NewOpenCLBuiltin->addAttr(OverloadableAttr::CreateImplicit(Context));
-
-      ProgModelFinalizer(OpenCLBuiltin, *NewOpenCLBuiltin);
-      LR.addDecl(NewOpenCLBuiltin);
+      ProgModelFinalizer(Builtin, *NewBuiltin);
+      LR.addDecl(NewBuiltin);
     }
   }
 
@@ -888,10 +885,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
           unsigned OpenCLVersion = Context.getLangOpts().OpenCLVersion;
           if (Context.getLangOpts().OpenCLCPlusPlus)
             OpenCLVersion = 200;
-          InsertOCLBuiltinDeclarationsFromTable<OpenCLBuiltin>(
+          InsertBuiltinDeclarationsFromTable<OpenCLBuiltin>(
               *this, OpenCLVersion, R, II, Index.first - 1, Index.second,
               [this](const OpenCLBuiltin::BuiltinStruct &OpenCLBuiltin,
                      FunctionDecl &NewOpenCLBuiltin) {
+                if (!this->getLangOpts().OpenCLCPlusPlus)
+                  NewOpenCLBuiltin.addAttr(
+                      OverloadableAttr::CreateImplicit(Context));
                 AddOpenCLExtensions(*this, OpenCLBuiltin, &NewOpenCLBuiltin);
               });
           return true;
@@ -902,7 +902,7 @@ bool Sema::LookupBuiltin(LookupResult &R) {
       if (getLangOpts().DeclareSPIRVBuiltins) {
         auto Index = SPIRVBuiltin::isBuiltin(II->getName());
         if (Index.first) {
-          InsertOCLBuiltinDeclarationsFromTable<SPIRVBuiltin>(
+          InsertBuiltinDeclarationsFromTable<SPIRVBuiltin>(
               *this, 0, R, II, Index.first - 1, Index.second,
               [this](const SPIRVBuiltin::BuiltinStruct &,
                      FunctionDecl &NewBuiltin) {
