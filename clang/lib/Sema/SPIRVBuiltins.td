@@ -282,7 +282,7 @@ SPVBuiltin<"ocl_" # _Name, _Signature, _Attributes> {}
 //===----------------------------------------------------------------------===//
 
 // OpenCL v1.0/1.2/2.0 s6.1.1: Built-in Scalar Data Types.
-def Bool      : IntType<"bool",   QualType<"BoolTy">, 8>;
+def Bool      : IntType<"bool",   QualType<"BoolTy">, 1>;
 def TrueChar      : IntType<"char",      QualType<"CharTy", 0, 1>, 8>;
 //def Char      : IntType<"char",      QualType<"CharTy", 0, 1>, 8>;
 def Char      : IntType<"schar",      QualType<"SignedCharTy", 0, 1>, 8>;
@@ -513,7 +513,9 @@ def : OCLSPVBuiltin<"rotate", [AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
 
 def : OCLSPVBuiltin<"s_abs", [AUIGenTypeN, ASIGenTypeN], Attr.Const>;
 
-foreach name = ["s_abs_diff", "s_add_sat",
+def : OCLSPVBuiltin<"s_abs_diff", [AUIGenTypeN, ASIGenTypeN, ASIGenTypeN], Attr.Const>;
+
+foreach name = ["s_add_sat",
                 "s_hadd", "s_rhadd",
                 "s_max", "s_min",
                 "s_mul_hi", "s_sub_sat"] in {
@@ -530,9 +532,9 @@ foreach name = ["s_upsample"] in {
   def : OCLSPVBuiltin<name, [GenTypeLongVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
 }
 
-foreach name = ["s_mad24", "s_mul24"] in {
-  def : OCLSPVBuiltin<name, [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
-}
+def : OCLSPVBuiltin<"s_mad24", [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+
+def : OCLSPVBuiltin<"s_mul24", [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
 
 foreach name = ["u_add_sat", "u_hadd",
                 "u_rhadd",
@@ -551,9 +553,9 @@ foreach name = ["u_upsample"] in {
   def : OCLSPVBuiltin<name, [GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
 }
 
-foreach name = ["u_mad24", "u_mul24"] in {
-  def : OCLSPVBuiltin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
-}
+def : OCLSPVBuiltin<"u_mad24", [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+
+def : OCLSPVBuiltin<"u_mul24", [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
 
 def : OCLSPVBuiltin<"u_abs", [AUIGenTypeN, AUIGenTypeN], Attr.Const>;
 
@@ -927,7 +929,7 @@ foreach name = ["GroupWaitEvents"] in {
 }
 
 foreach name = ["GroupAll", "GroupAny"] in {
-  def : SPVBuiltin<name, [Char, UInt, Char], Attr.Convergent>;
+  def : SPVBuiltin<name, [Bool, UInt, Bool], Attr.Convergent>;
 }
 
 foreach name = ["GroupBroadcast"] in {
