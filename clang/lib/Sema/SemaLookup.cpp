@@ -761,6 +761,87 @@ static void AddOpenCLExtensions(Sema &S,
     S.setOpenCLExtensionForDecl(FDecl, E);
 }
 
+static void GenSPIRVCustomTypeMangling(ASTContext &Context, QualType Ty,
+                                       llvm::raw_ostream &Out) {
+  if (Ty->isPointerType()) {
+    auto PtrType = Ty->getAs<PointerType>();
+    static const unsigned AddrSpaceMap[] = {
+        4, // Default
+        1, // opencl_global
+        3, // opencl_local
+        2, // opencl_constant
+        0, // opencl_private
+        4, // opencl_generic
+        0, // cuda_device
+        0, // cuda_constant
+        0, // cuda_shared
+        1, // sycl_global
+        3, // sycl_local
+        2, // sycl_constant
+        0, // sycl_private
+        4, // sycl_generic
+    };
+    LangAS AddrSpace = Ty.getAddressSpace();
+    unsigned AspNum = isTargetAddressSpace(AddrSpace)
+                          ? toTargetAddressSpace(AddrSpace)
+                          : AddrSpaceMap[static_cast<unsigned>(AddrSpace)];
+    Out << "p" << AspNum;
+    Ty = PtrType->getPointeeType();
+  }
+  if (Ty->isVectorType()) {
+    auto VecType = Ty->getAs<VectorType>();
+    Out << "v" << VecType->getNumElements();
+    Ty = VecType->getElementType();
+  }
+  assert(Ty->isBuiltinType());
+  auto BT = Ty->getAs<BuiltinType>();
+  if (BT->isInteger()) {
+    Out << "i" << Context.getTypeSize(Ty);
+  } else if (BT->isFloatingPoint()) {
+    Out << "f" << Context.getTypeSize(Ty);
+  } else {
+    switch (BT->getKind()) {
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  case BuiltinType::Id:                                                        \
+    Out << "ocl_" #ImgType "_" #Suffix;                                        \
+    break;
+#include "clang/Basic/OpenCLImageTypes.def"
+    case BuiltinType::OCLSampler:
+      Out << "ocl_sampler";
+      break;
+    case BuiltinType::OCLEvent:
+      Out << "ocl_event";
+      break;
+    case BuiltinType::OCLClkEvent:
+      Out << "ocl_clkevent";
+      break;
+    case BuiltinType::OCLQueue:
+      Out << "ocl_queue";
+      break;
+    case BuiltinType::Void:
+      Out << "v";
+      break;
+    default:
+      llvm_unreachable("Invalid type for SPIR-V");
+    }
+  }
+}
+
+static void ApplySPIRVCustomMangling(Sema &S, FunctionDecl &FDecl) {
+  SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  Out << FDecl.getName().split("_R").first << ".";
+  GenSPIRVCustomTypeMangling(S.Context, FDecl.getReturnType(), Out);
+  for (auto PVD : FDecl.parameters()) {
+    Out << ".";
+    GenSPIRVCustomTypeMangling(S.Context, PVD->getType(), Out);
+  }
+
+  AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(S.Context, Buffer.str(),
+                                                    /*LiteralLabel=*/true);
+  FDecl.addAttr(Attr);
+}
+
 /// When trying to resolve a function name, if ProgModel::isBuiltin() returns a
 /// non-null <Index, Len> pair, then the name is referencing a
 /// builtin function.  Add all candidate signatures to the LookUpResult.
@@ -908,6 +989,7 @@ bool Sema::LookupBuiltin(LookupResult &R) {
               *this, 0, R, II, Index.first - 1, Index.second,
               [this](const SPIRVBuiltin::BuiltinStruct &,
                      FunctionDecl &NewBuiltin) {
+                ApplySPIRVCustomMangling(*this, NewBuiltin);
                 NewBuiltin.addAttr(
                     SYCLDeviceAttr::CreateImplicit(this->Context));
               });
