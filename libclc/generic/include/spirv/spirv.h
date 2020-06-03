@@ -59,7 +59,6 @@
 #include <spirv/math/atanh.h>
 #include <spirv/math/atanpi.h>
 #include <spirv/math/cbrt.h>
-#include <spirv/math/copysign.h>
 #include <spirv/math/cos.h>
 #include <spirv/math/cosh.h>
 #include <spirv/math/cospi.h>
@@ -89,9 +88,7 @@
 #include <spirv/math/half_log2.h>
 #include <spirv/math/half_powr.h>
 #include <spirv/math/half_recip.h>
-#include <spirv/math/half_rsqrt.h>
 #include <spirv/math/half_sin.h>
-#include <spirv/math/half_sqrt.h>
 #include <spirv/math/half_tan.h>
 #include <spirv/math/hypot.h>
 #include <spirv/math/ilogb.h>
@@ -121,7 +118,6 @@
 #include <spirv/math/sincos.h>
 #include <spirv/math/sinh.h>
 #include <spirv/math/sinpi.h>
-#include <spirv/math/sqrt.h>
 #include <spirv/math/tan.h>
 #include <spirv/math/tanh.h>
 #include <spirv/math/tanpi.h>
@@ -138,34 +134,13 @@
 #include <spirv/math/native_powr.h>
 #include <spirv/math/native_recip.h>
 #include <spirv/math/native_sin.h>
-#include <spirv/math/native_sqrt.h>
-#include <spirv/math/native_rsqrt.h>
 #include <spirv/math/native_tan.h>
-#include <spirv/math/rsqrt.h>
 
 /* 6.11.2.1 Floating-point macros */
 #include <clc/float/definitions.h>
 
 /* 6.11.3 Integer Definitions */
 #include <clc/integer/definitions.h>
-
-/* 6.11.4 Common Functions */
-#include <spirv/common/degrees.h>
-#include <spirv/common/mix.h>
-#include <spirv/common/radians.h>
-#include <spirv/common/sign.h>
-#include <spirv/common/smoothstep.h>
-#include <spirv/common/step.h>
-
-/* 6.11.5 Geometric Functions */
-#include <spirv/geometric/cross.h>
-#include <spirv/geometric/distance.h>
-#include <spirv/geometric/dot.h>
-#include <spirv/geometric/fast_distance.h>
-#include <spirv/geometric/fast_length.h>
-#include <spirv/geometric/fast_normalize.h>
-#include <spirv/geometric/length.h>
-#include <spirv/geometric/normalize.h>
 
 /* 6.11.11 Atomic Functions */
 #include <spirv/atomic/atomic_add.h>

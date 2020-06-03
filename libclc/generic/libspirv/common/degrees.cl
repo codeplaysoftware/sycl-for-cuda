@@ -29,3 +29,14 @@ _CLC_OVERLOAD _CLC_DEF double __spirv_ocl_degrees(double radians) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __spirv_ocl_degrees, double);
 
 #endif
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+_CLC_OVERLOAD _CLC_DEF half __spirv_ocl_degrees(half radians) {
+  return __spirv_ocl_degrees((float)radians);
+}
+
+_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __spirv_ocl_degrees, half);
+
+#endif
