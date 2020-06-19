@@ -23,7 +23,7 @@
 #include <clc/clc.h>
 #include <spirv/spirv.h>
 
-#include "../clcmacro.h"
+#include <clcmacro.h>
 
 #define STEP_DEF(edge_type, x_type)                                            \
   _CLC_OVERLOAD _CLC_DEF x_type step(edge_type edge, x_type x) {               \
